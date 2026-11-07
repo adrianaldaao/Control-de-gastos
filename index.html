@@ -3,16 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mi mes · Finanzas</title>
-<link rel="icon" type="image/png" href="logo.png">
-<link rel="apple-touch-icon" href="logo.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mi mes">
-<link href="https://fonts.googleapis.com/css2?family=Nunito..." rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&amp;display=swap" rel="stylesheet">
 <style>
-:root{--bg:#F6F4FB;--card:#fff;--ink:#2A2540;--mute:#8B86A3;--line:#E8E4F3;--brand:#7C5CFC;--inc:#2FBF9B;--exp:#FF6F91;--inv:#4DA3FF;--sav:#2FBF9B;--semi:#FF9F5A;--vr:#FFB938;--debt:#B58CFF;--shadow:0 6px 18px rgba(80,60,160,.08);
+:root{--bg:#F6F4FB;--card:#fff;--ink:#2A2540;--mute:#8B86A3;--line:#E8E4F3;--brand:#1F5F6B;--inc:#82916A;--exp:#6F2E44;--inv:#5B7FA5;--sav:#82916A;--semi:#B87550;--vr:#D0A34F;--debt:#79566B;--shadow:0 6px 18px rgba(80,60,160,.08);
 color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17142A;--card:#231F3D;--ink:#F1EEFF;--mute:#9C97B8;--line:#332E55;--shadow:none;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#17142A;--card:#231F3D;--ink:#F1EEFF;--mute:#9C97B8;--line:#332E55;--shadow:none;color-scheme:dark}
@@ -265,7 +258,7 @@ const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Sep
 const n2=v=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(v);
 const nf=v=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const f2=v=>v==null?'':String(v).replace('.',',');
-const BK={fixed:['--exp','Gastos fijos','#FF6F91'],semi:['--semi','Gastos semifijos','#FF9F5A'],var:['--vr','Gastos variables','#FFB938'],debt:['--debt','Deudas','#B58CFF'],invest:['--inv','Inversión','#4DA3FF'],sav:['--sav','Ahorro','#2FBF9B'],income:['--inc','Ingresos','#2FBF9B']};
+const BK={fixed:['--exp','Gastos fijos','#6F2E44'],semi:['--semi','Gastos semifijos','#B87550'],var:['--vr','Gastos variables','#D0A34F'],debt:['--debt','Deudas','#79566B'],invest:['--inv','Inversión','#5B7FA5'],sav:['--sav','Ahorro','#82916A'],income:['--inc','Ingresos','#82916A']};
 const bcol=(b,i)=>(S.colors||{})['b:'+b]||PAL[i%PAL.length];
 function applyColors(){const c=S.colors||{};if(S.theme)document.documentElement.dataset.theme=S.theme;for(const k in BK)document.documentElement.style[c['k:'+k]?'setProperty':'removeProperty'](BK[k][0],c['k:'+k])}
 function setCol(k,v){S.colors=S.colors||{};S.colors[k]=v;save();render()}
