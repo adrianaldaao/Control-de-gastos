@@ -116,9 +116,10 @@ nav button.on{background:var(--brand);color:#fff}
 button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
 
 .sh::before{content:"";display:block;width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
-.ops{display:flex;justify-content:center;gap:6px;margin:2px 0 12px}
-.opb{width:38px;height:36px;border-radius:11px;background:var(--bg);border:1.5px solid var(--line);font:800 17px Nunito,system-ui,sans-serif;color:var(--ink);display:grid;place-items:center}
-.opb:active{background:var(--brand);color:#fff;border-color:var(--brand)}</style>
+
+
+
+.sh{touch-action:pan-y;overscroll-behavior:contain}</style>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -267,8 +268,8 @@ function drawSheet(){
  $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${M.id?'Editar':'Nuevo'} movimiento">
  <div class="seg" style="flex-wrap:wrap">${allTypes().map(k=>`<button style="min-width:18%;${M.type===k?`background:${T[k].c}`:''}" class="${M.type===k?'on':''}" onclick="setType('${k}')">${esc(T[k].s)}</button>`).join('')}</div>
  ${M.type==='income'?org(false):''}
- <input id="amt" class="amtin" inputmode="decimal" placeholder="0,00 €" value="${esc(M.amount)}" style="color:${c}" onblur="resolveAmt(this)" ${af}>
- <div class="ops" role="group" aria-label="Operadores matemáticos">${[['+','+'],['-','−'],['*','×'],['/','÷'],['(','('],[')',')'],['=','＝']].map(([op,lb])=>`<button type="button" class="opb" onmousedown="event.preventDefault()" onclick="insOp('${op}')">${lb}</button>`).join('')}</div>
+ <input id="amt" class="amtin" type="text" inputmode="text" enterkeyhint="done" onkeydown="amtKey(event,this)" placeholder="0,00 €" value="${esc(M.amount)}" style="color:${c}" onblur="resolveAmt(this)" ${af}>
+ 
  <div class="chips">${CATS[M.type].map((x,i)=>M.manage?`<button class="chip" onclick="rmCat(${i})">${x[1]} ${esc(x[0])} ✕</button>`:`<button class="chip ${M.cat===x[0]?'on':''}" onclick="pickCat(${i})">${x[1]} ${esc(x[0])}</button>`).join('')}<button class="chip new" onclick="grab();M.adding=!M.adding;M.manage=false;drawSheet()">＋ Nueva</button><button class="chip new" onclick="grab();M.manage=!M.manage;M.adding=false;drawSheet()">${M.manage?'Listo':'✎ Editar'}</button></div>
  ${M.adding?`<div class="f"><input id="cn" placeholder="Nuevo concepto" maxlength="24"><input id="ce" placeholder="🙂" maxlength="4" style="flex:none;width:64px;text-align:center"><button class="chip on" style="margin-bottom:12px" onclick="addCat()">Añadir</button></div>`:''}
  ${T[M.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${MODES.map((b,i)=>`<button class="chip ${M.mode===b?'on':''}" data-v="${esc(b)}" onclick="setM('mode',this.dataset.v)"><i class="dot" style="background:${mcol(b,i)}"></i> ${esc(b)}</button>`).join('')}</div>`:''}
@@ -292,7 +293,7 @@ function bankCard(l){
 function drawTr(){
  const af=M.id||M.drawn?'':'autofocus';M.drawn=true;
  const ch=k=>BANKS.map(b=>`<button class="chip ${M[k]===b?'on':''}" data-v="${esc(b)}" onclick="setM('${k}',this.dataset.v)">${esc(b)}</button>`).join('');
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Traspaso entre bancos"><div class="seg">${['income','fixed','semi','var','invest'].map(k=>`<button class="${k==='income'?'on':''}" ${k==='income'?'style="background:var(--brand)"':''} onclick="setType('${k}')">${T[k].s}</button>`).join('')}</div>${org(true)}<input id="amt" class="amtin" inputmode="decimal" placeholder="0,00 €" value="${esc(M.amount)}" style="color:var(--brand)" onblur="resolveAmt(this)" ${af}><div class="lbl">Sale de</div><div class="chips">${ch('bank')}</div><div class="lbl">Entra en</div><div class="chips">${ch('bank2')}</div><div class="f"><input id="dt" type="date" value="${M.date}"><input id="nt" placeholder="Nota (opcional)" maxlength="60" value="${esc(M.note)}"></div><button class="save" style="background:var(--brand)" onclick="saveTr()">${M.id?'Guardar cambios':'Añadir traspaso'}</button>${M.id?'<button class="del" onclick="delTx()">Eliminar traspaso</button>':''}</div>`;
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Traspaso entre bancos"><div class="seg">${['income','fixed','semi','var','invest'].map(k=>`<button class="${k==='income'?'on':''}" ${k==='income'?'style="background:var(--brand)"':''} onclick="setType('${k}')">${T[k].s}</button>`).join('')}</div>${org(true)}<input id="amt" class="amtin" type="text" inputmode="text" enterkeyhint="done" onkeydown="amtKey(event,this)" placeholder="0,00 €" value="${esc(M.amount)}" style="color:var(--brand)" onblur="resolveAmt(this)" ${af}><div class="lbl">Sale de</div><div class="chips">${ch('bank')}</div><div class="lbl">Entra en</div><div class="chips">${ch('bank2')}</div><div class="f"><input id="dt" type="date" value="${M.date}"><input id="nt" placeholder="Nota (opcional)" maxlength="60" value="${esc(M.note)}"></div><button class="save" style="background:var(--brand)" onclick="saveTr()">${M.id?'Guardar cambios':'Añadir traspaso'}</button>${M.id?'<button class="del" onclick="delTx()">Eliminar traspaso</button>':''}</div>`;
 }
 function saveTr(){
  grab();const a=parseFloat(String(M.amount).replace(',','.'));
@@ -300,40 +301,7 @@ function saveTr(){
  if(M.bank===M.bank2){$('#nt').placeholder='Elige dos bancos distintos';return}
  const o={type:'transfer',cat:'Traspaso',amount:Math.round(a*100)/100,bank:M.bank,bank2:M.bank2,date:M.date||defDate(),note:M.note.trim()};
  if(M.id)Object.assign(S.tx.find(x=>x.id===M.id),o);else S.tx.push({id:Date.now(),...o});
- const d=new Date(o.date+'T12:00');V.y=d.getFullYear();V.m=d.getMonth();save();closeSheet();function initSwipeSheet(){
- let sy=0,dy=0,sh=null,dragging=false;
- const sheet=document.getElementById('sheet');
- sheet.addEventListener('touchstart',e=>{
-  sh=e.target.closest('.sh');
-  if(!sh||sh.scrollTop>4)return;
-  sy=e.touches[0].clientY;dy=0;dragging=true;
-  sh.style.transition='none';
- },{passive:true});
- sheet.addEventListener('touchmove',e=>{
-  if(!dragging||!sh)return;
-  dy=e.touches[0].clientY-sy;
-  if(dy>0){
-   if(sh.scrollTop<=0&&e.cancelable)e.preventDefault();
-   sh.style.transform=`translateY(${dy}px)`;
-  }else if(dy<-10){
-   dragging=false;sh.style.transform='';
-  }
- },{passive:false});
- sheet.addEventListener('touchend',()=>{
-  if(!dragging||!sh)return;
-  dragging=false;
-  sh.style.transition='transform .2s ease-out';
-  if(dy>85){
-   sh.style.transform='translateY(100%)';
-   setTimeout(()=>{closeSheet();render()},180);
-  }else{
-   sh.style.transform='';
-  }
-  sh=null;
- });
-}
-initSwipeSheet();
-render();
+ const d=new Date(o.date+'T12:00');V.y=d.getFullYear();V.m=d.getMonth();save();closeSheet();render();
 }
 function tip(e){const t=document.getElementById('segtip');t.innerHTML=`<b>${e.dataset.n}</b>: ${e.dataset.p} de tus ingresos · ${e.dataset.v}`;document.querySelectorAll('.sg').forEach(i=>i.classList.toggle('sel',i===e))}
 const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -445,7 +413,7 @@ function setR(k,v){grabR();if(k==='mode'){R.mode=v;if(String(v).toLowerCase()===
 function setTimes(n){grabR();R.times=n;R.days=Array.from({length:n},(_,i)=>R.days[i]||[1,8,15,22][i]);drawRec()}
 function drawRec(){
  const c=T[R.type].c,ch=(k,a)=>a.map(b=>`<button class="chip ${R[k]===b?'on':''}" data-v="${esc(b)}" onclick="setR('${k}',this.dataset.v)">${esc(b)}</button>`).join('');
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet();render()"></div><div class="sh" role="dialog" aria-label="Recurrencia"><h2 style="margin:0;font-size:18px">${R.id?'Editar':'Nueva'} recurrencia · ${T[R.type].s}</h2><input id="ra" class="amtin" inputmode="decimal" placeholder="0,00 € por cargo" value="${esc(R.amount)}" style="color:${c}" onblur="resolveAmt(this)"><div class="ops" role="group" aria-label="Operadores matemáticos">${[['+','+'],['-','−'],['*','×'],['/','÷'],['(','('],[')',')'],['=','＝']].map(([op,lb])=>`<button type="button" class="opb" onmousedown="event.preventDefault()" onclick="insOp('${op}','ra')">${lb}</button>`).join('')}</div><div class="lbl">Concepto</div><div class="chips">${CATS[R.type].map((x,i)=>`<button class="chip ${R.cat===x[0]?'on':''}" onclick="setR('cat',CATS[R.type][${i}][0])">${x[1]} ${esc(x[0])}</button>`).join('')}</div><div class="lbl">Veces al mes</div><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${R.times===n?'on':''}" onclick="setTimes(${n})">${n}</button>`).join('')}</div><div class="lbl">Día del mes de cada cargo</div><div class="f">${R.days.slice(0,R.times).map((d,i)=>dayPick(d,i)).join('')}</div><small style="color:var(--mute);font-weight:600">Elige el día en el calendario: el cargo se repite ese día de cada mes (si el mes es más corto, el último día).</small><div class="lbl">Omitir en estos meses (no se crea el cargo)</div><div class="chips">${skipMonths().map(([k,n])=>`<button class="chip ${R.skip.includes(k)?'on':''}" onclick="togSkip('${k}')">${n}</button>`).join('')}</div>${['fixed','debt'].includes(R.type)||T[R.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${ch('mode',MODES)}</div>`:''}${(['fixed','debt'].includes(R.type)||T[R.type].g==='exp')&&R.mode&&R.mode.toLowerCase()==='efectivo'?`<div class="lbl">Banco</div><small style="display:block;color:var(--mute);font-weight:700;margin:4px 0 12px">💵 Pago en efectivo (sin banco)</small>`:`<div class="lbl">Banco</div><div class="chips">${ch('bank',BANKS)}</div>`}<div class="f"><input id="rn" placeholder="Nota (opcional)" maxlength="60" value="${esc(R.note)}"></div><button class="save" style="background:${c}" onclick="saveRec()">Guardar</button>${R.id?'<button class="del" onclick="delRec()">Eliminar recurrencia</button>':''}<button class="del" style="color:var(--mute)" onclick="drawRecs()">Volver</button></div>`;
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet();render()"></div><div class="sh" role="dialog" aria-label="Recurrencia"><h2 style="margin:0;font-size:18px">${R.id?'Editar':'Nueva'} recurrencia · ${T[R.type].s}</h2><input id="ra" class="amtin" type="text" inputmode="text" enterkeyhint="done" onkeydown="amtKey(event,this)" placeholder="0,00 € por cargo" value="${esc(R.amount)}" style="color:${c}" onblur="resolveAmt(this)"><div class="lbl">Concepto</div><div class="chips">${CATS[R.type].map((x,i)=>`<button class="chip ${R.cat===x[0]?'on':''}" onclick="setR('cat',CATS[R.type][${i}][0])">${x[1]} ${esc(x[0])}</button>`).join('')}</div><div class="lbl">Veces al mes</div><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${R.times===n?'on':''}" onclick="setTimes(${n})">${n}</button>`).join('')}</div><div class="lbl">Día del mes de cada cargo</div><div class="f">${R.days.slice(0,R.times).map((d,i)=>dayPick(d,i)).join('')}</div><small style="color:var(--mute);font-weight:600">Elige el día en el calendario: el cargo se repite ese día de cada mes (si el mes es más corto, el último día).</small><div class="lbl">Omitir en estos meses (no se crea el cargo)</div><div class="chips">${skipMonths().map(([k,n])=>`<button class="chip ${R.skip.includes(k)?'on':''}" onclick="togSkip('${k}')">${n}</button>`).join('')}</div>${['fixed','debt'].includes(R.type)||T[R.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${ch('mode',MODES)}</div>`:''}${(['fixed','debt'].includes(R.type)||T[R.type].g==='exp')&&R.mode&&R.mode.toLowerCase()==='efectivo'?`<div class="lbl">Banco</div><small style="display:block;color:var(--mute);font-weight:700;margin:4px 0 12px">💵 Pago en efectivo (sin banco)</small>`:`<div class="lbl">Banco</div><div class="chips">${ch('bank',BANKS)}</div>`}<div class="f"><input id="rn" placeholder="Nota (opcional)" maxlength="60" value="${esc(R.note)}"></div><button class="save" style="background:${c}" onclick="saveRec()">Guardar</button>${R.id?'<button class="del" onclick="delRec()">Eliminar recurrencia</button>':''}<button class="del" style="color:var(--mute)" onclick="drawRecs()">Volver</button></div>`;
 }
 function saveRec(){
  grabR();const a=parseFloat(String(R.amount).replace(',','.'));
@@ -742,6 +710,66 @@ function saveTx(){
 function delTx(){S.tx=S.tx.filter(x=>x.id!==M.id);save();closeSheet();render()}
 let armed=false;function resetAll(){if(!armed){armed=true;document.querySelector('.foot .rs').textContent='¿Seguro? Pulsa de nuevo';setTimeout(()=>{armed=false;render()},4000);return}armed=false;S.tx=[];save();render()}
 render();
+
+
+function resolveAmt(el){
+ const v=el.value.trim();
+ if(!v)return;
+ if(v[0]==='='||/[+\-*/()]/.test(v.slice(1))){
+  const expr=v[0]==='='?v.slice(1):v;
+  const r=calc(expr);
+  if(!isNaN(r)){el.value=f2(r)}
+  else{el.value='';el.placeholder='Operación no válida'}
+ }
+ if(M&&el.id==='amt')M.amount=el.value;
+ if(R&&el.id==='ra')R.amount=el.value;
+}
+function amtKey(e,el){
+ if(e.key==='Enter'){
+  e.preventDefault();
+  resolveAmt(el);
+  el.blur();
+ }
+}
+(function(){
+ let sy=0,dy=0,sh=null,active=false;
+ document.addEventListener('touchstart',e=>{
+  const el=e.target.closest('.sh');
+  if(!el)return;
+  if(el.scrollTop>5)return;
+  sh=el;
+  sy=e.touches[0].clientY;
+  dy=0;
+  active=true;
+  sh.style.transition='none';
+ },{passive:true});
+
+ document.addEventListener('touchmove',e=>{
+  if(!active||!sh)return;
+  dy=e.touches[0].clientY-sy;
+  if(dy>0&&sh.scrollTop<=0){
+   if(e.cancelable)e.preventDefault();
+   sh.style.transform='translateY('+dy+'px)';
+  }else if(dy<-8){
+   active=false;
+   sh.style.transform='';
+  }
+ },{passive:false});
+
+ document.addEventListener('touchend',()=>{
+  if(!active||!sh)return;
+  active=false;
+  const el=sh;
+  sh=null;
+  el.style.transition='transform .22s ease-out';
+  if(dy>70){
+   el.style.transform='translateY(100%)';
+   setTimeout(()=>{closeSheet();render()},180);
+  }else{
+   el.style.transform='';
+  }
+ },{passive:true});
+})();
 </script>
 
 
