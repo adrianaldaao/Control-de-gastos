@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es"><head>
+<html lang="es" style="--inc: #82916A; --exp: #6F2E44; --semi: #B87550; --vr: #D0A34F; --debt: #79566B; --inv: #5B7FA5; --sav: #82916A;"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mi mes · Finanzas</title>
@@ -114,7 +114,11 @@ nav button.on{background:var(--brand);color:#fff}
 .lg.off .dot{background:var(--mute)!important}
 .cin{width:38px;height:32px;border:0;background:none;padding:0;flex:none}
 button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
-</style>
+
+.sh::before{content:"";display:block;width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.ops{display:flex;justify-content:center;gap:6px;margin:2px 0 12px}
+.opb{width:38px;height:36px;border-radius:11px;background:var(--bg);border:1.5px solid var(--line);font:800 17px Nunito,system-ui,sans-serif;color:var(--ink);display:grid;place-items:center}
+.opb:active{background:var(--brand);color:#fff;border-color:var(--brand)}</style>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -122,6 +126,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-
 <meta name="apple-mobile-web-app-title" content="Mi mes">
 <meta name="theme-color" content="#F6F4FB" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#17142A" media="(prefers-color-scheme: dark)">
+
+
+
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
 <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Mi mes · Finanzas&quot;,&quot;short_name&quot;:&quot;Mi mes&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;background_color&quot;:&quot;#17142A&quot;,&quot;theme_color&quot;:&quot;#1F5F6B&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;logo.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}"></head>
@@ -261,7 +268,7 @@ function drawSheet(){
  <div class="seg" style="flex-wrap:wrap">${allTypes().map(k=>`<button style="min-width:18%;${M.type===k?`background:${T[k].c}`:''}" class="${M.type===k?'on':''}" onclick="setType('${k}')">${esc(T[k].s)}</button>`).join('')}</div>
  ${M.type==='income'?org(false):''}
  <input id="amt" class="amtin" inputmode="decimal" placeholder="0,00 €" value="${esc(M.amount)}" style="color:${c}" onblur="resolveAmt(this)" ${af}>
- <button class="chip new" style="display:block;margin:0 auto 10px" onclick="calcMode()">＝ Calculadora (ej. =50+20/2)</button>
+ <div class="ops" role="group" aria-label="Operadores matemáticos">${[['+','+'],['-','−'],['*','×'],['/','÷'],['(','('],[')',')'],['=','＝']].map(([op,lb])=>`<button type="button" class="opb" onmousedown="event.preventDefault()" onclick="insOp('${op}')">${lb}</button>`).join('')}</div>
  <div class="chips">${CATS[M.type].map((x,i)=>M.manage?`<button class="chip" onclick="rmCat(${i})">${x[1]} ${esc(x[0])} ✕</button>`:`<button class="chip ${M.cat===x[0]?'on':''}" onclick="pickCat(${i})">${x[1]} ${esc(x[0])}</button>`).join('')}<button class="chip new" onclick="grab();M.adding=!M.adding;M.manage=false;drawSheet()">＋ Nueva</button><button class="chip new" onclick="grab();M.manage=!M.manage;M.adding=false;drawSheet()">${M.manage?'Listo':'✎ Editar'}</button></div>
  ${M.adding?`<div class="f"><input id="cn" placeholder="Nuevo concepto" maxlength="24"><input id="ce" placeholder="🙂" maxlength="4" style="flex:none;width:64px;text-align:center"><button class="chip on" style="margin-bottom:12px" onclick="addCat()">Añadir</button></div>`:''}
  ${T[M.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${MODES.map((b,i)=>`<button class="chip ${M.mode===b?'on':''}" data-v="${esc(b)}" onclick="setM('mode',this.dataset.v)"><i class="dot" style="background:${mcol(b,i)}"></i> ${esc(b)}</button>`).join('')}</div>`:''}
@@ -293,7 +300,40 @@ function saveTr(){
  if(M.bank===M.bank2){$('#nt').placeholder='Elige dos bancos distintos';return}
  const o={type:'transfer',cat:'Traspaso',amount:Math.round(a*100)/100,bank:M.bank,bank2:M.bank2,date:M.date||defDate(),note:M.note.trim()};
  if(M.id)Object.assign(S.tx.find(x=>x.id===M.id),o);else S.tx.push({id:Date.now(),...o});
- const d=new Date(o.date+'T12:00');V.y=d.getFullYear();V.m=d.getMonth();save();closeSheet();render();
+ const d=new Date(o.date+'T12:00');V.y=d.getFullYear();V.m=d.getMonth();save();closeSheet();function initSwipeSheet(){
+ let sy=0,dy=0,sh=null,dragging=false;
+ const sheet=document.getElementById('sheet');
+ sheet.addEventListener('touchstart',e=>{
+  sh=e.target.closest('.sh');
+  if(!sh||sh.scrollTop>4)return;
+  sy=e.touches[0].clientY;dy=0;dragging=true;
+  sh.style.transition='none';
+ },{passive:true});
+ sheet.addEventListener('touchmove',e=>{
+  if(!dragging||!sh)return;
+  dy=e.touches[0].clientY-sy;
+  if(dy>0){
+   if(sh.scrollTop<=0&&e.cancelable)e.preventDefault();
+   sh.style.transform=`translateY(${dy}px)`;
+  }else if(dy<-10){
+   dragging=false;sh.style.transform='';
+  }
+ },{passive:false});
+ sheet.addEventListener('touchend',()=>{
+  if(!dragging||!sh)return;
+  dragging=false;
+  sh.style.transition='transform .2s ease-out';
+  if(dy>85){
+   sh.style.transform='translateY(100%)';
+   setTimeout(()=>{closeSheet();render()},180);
+  }else{
+   sh.style.transform='';
+  }
+  sh=null;
+ });
+}
+initSwipeSheet();
+render();
 }
 function tip(e){const t=document.getElementById('segtip');t.innerHTML=`<b>${e.dataset.n}</b>: ${e.dataset.p} de tus ingresos · ${e.dataset.v}`;document.querySelectorAll('.sg').forEach(i=>i.classList.toggle('sel',i===e))}
 const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -405,7 +445,7 @@ function setR(k,v){grabR();if(k==='mode'){R.mode=v;if(String(v).toLowerCase()===
 function setTimes(n){grabR();R.times=n;R.days=Array.from({length:n},(_,i)=>R.days[i]||[1,8,15,22][i]);drawRec()}
 function drawRec(){
  const c=T[R.type].c,ch=(k,a)=>a.map(b=>`<button class="chip ${R[k]===b?'on':''}" data-v="${esc(b)}" onclick="setR('${k}',this.dataset.v)">${esc(b)}</button>`).join('');
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet();render()"></div><div class="sh" role="dialog" aria-label="Recurrencia"><h2 style="margin:0;font-size:18px">${R.id?'Editar':'Nueva'} recurrencia · ${T[R.type].s}</h2><input id="ra" class="amtin" inputmode="decimal" placeholder="0,00 € por cargo" value="${esc(R.amount)}" style="color:${c}" onblur="resolveAmt(this)"><div class="lbl">Concepto</div><div class="chips">${CATS[R.type].map((x,i)=>`<button class="chip ${R.cat===x[0]?'on':''}" onclick="setR('cat',CATS[R.type][${i}][0])">${x[1]} ${esc(x[0])}</button>`).join('')}</div><div class="lbl">Veces al mes</div><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${R.times===n?'on':''}" onclick="setTimes(${n})">${n}</button>`).join('')}</div><div class="lbl">Día del mes de cada cargo</div><div class="f">${R.days.slice(0,R.times).map((d,i)=>dayPick(d,i)).join('')}</div><small style="color:var(--mute);font-weight:600">Elige el día en el calendario: el cargo se repite ese día de cada mes (si el mes es más corto, el último día).</small><div class="lbl">Omitir en estos meses (no se crea el cargo)</div><div class="chips">${skipMonths().map(([k,n])=>`<button class="chip ${R.skip.includes(k)?'on':''}" onclick="togSkip('${k}')">${n}</button>`).join('')}</div>${['fixed','debt'].includes(R.type)||T[R.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${ch('mode',MODES)}</div>`:''}${(['fixed','debt'].includes(R.type)||T[R.type].g==='exp')&&R.mode&&R.mode.toLowerCase()==='efectivo'?`<div class="lbl">Banco</div><small style="display:block;color:var(--mute);font-weight:700;margin:4px 0 12px">💵 Pago en efectivo (sin banco)</small>`:`<div class="lbl">Banco</div><div class="chips">${ch('bank',BANKS)}</div>`}<div class="f"><input id="rn" placeholder="Nota (opcional)" maxlength="60" value="${esc(R.note)}"></div><button class="save" style="background:${c}" onclick="saveRec()">Guardar</button>${R.id?'<button class="del" onclick="delRec()">Eliminar recurrencia</button>':''}<button class="del" style="color:var(--mute)" onclick="drawRecs()">Volver</button></div>`;
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet();render()"></div><div class="sh" role="dialog" aria-label="Recurrencia"><h2 style="margin:0;font-size:18px">${R.id?'Editar':'Nueva'} recurrencia · ${T[R.type].s}</h2><input id="ra" class="amtin" inputmode="decimal" placeholder="0,00 € por cargo" value="${esc(R.amount)}" style="color:${c}" onblur="resolveAmt(this)"><div class="ops" role="group" aria-label="Operadores matemáticos">${[['+','+'],['-','−'],['*','×'],['/','÷'],['(','('],[')',')'],['=','＝']].map(([op,lb])=>`<button type="button" class="opb" onmousedown="event.preventDefault()" onclick="insOp('${op}','ra')">${lb}</button>`).join('')}</div><div class="lbl">Concepto</div><div class="chips">${CATS[R.type].map((x,i)=>`<button class="chip ${R.cat===x[0]?'on':''}" onclick="setR('cat',CATS[R.type][${i}][0])">${x[1]} ${esc(x[0])}</button>`).join('')}</div><div class="lbl">Veces al mes</div><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${R.times===n?'on':''}" onclick="setTimes(${n})">${n}</button>`).join('')}</div><div class="lbl">Día del mes de cada cargo</div><div class="f">${R.days.slice(0,R.times).map((d,i)=>dayPick(d,i)).join('')}</div><small style="color:var(--mute);font-weight:600">Elige el día en el calendario: el cargo se repite ese día de cada mes (si el mes es más corto, el último día).</small><div class="lbl">Omitir en estos meses (no se crea el cargo)</div><div class="chips">${skipMonths().map(([k,n])=>`<button class="chip ${R.skip.includes(k)?'on':''}" onclick="togSkip('${k}')">${n}</button>`).join('')}</div>${['fixed','debt'].includes(R.type)||T[R.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${ch('mode',MODES)}</div>`:''}${(['fixed','debt'].includes(R.type)||T[R.type].g==='exp')&&R.mode&&R.mode.toLowerCase()==='efectivo'?`<div class="lbl">Banco</div><small style="display:block;color:var(--mute);font-weight:700;margin:4px 0 12px">💵 Pago en efectivo (sin banco)</small>`:`<div class="lbl">Banco</div><div class="chips">${ch('bank',BANKS)}</div>`}<div class="f"><input id="rn" placeholder="Nota (opcional)" maxlength="60" value="${esc(R.note)}"></div><button class="save" style="background:${c}" onclick="saveRec()">Guardar</button>${R.id?'<button class="del" onclick="delRec()">Eliminar recurrencia</button>':''}<button class="del" style="color:var(--mute)" onclick="drawRecs()">Volver</button></div>`;
 }
 function saveRec(){
  grabR();const a=parseFloat(String(R.amount).replace(',','.'));
@@ -428,8 +468,23 @@ function calc(s){
  const add=()=>{let v=mul();while(s[i]==='+'||s[i]==='-'){const o=s[i++],r=mul();v=o==='+'?v+r:v-r}return v};
  try{const v=add();return i===s.length&&isFinite(v)?Math.round(v*100)/100:NaN}catch(e){return NaN}
 }
-const pv=s=>{s=String(s).trim();return s[0]==='='?calc(s.slice(1)):parseFloat(s.replace(',','.'))};
-function resolveAmt(el){const v=el.value.trim();if(v[0]==='='){const r=calc(v.slice(1));el.value=isNaN(r)?'':f2(r);if(isNaN(r))el.placeholder='Operación no válida'}if(M)M.amount=el.value}
+const pv=s=>{s=String(s).trim();if(!s)return NaN;if(s[0]==='=')return calc(s.slice(1));if(/[+\-*/()]/.test(s.slice(1)))return calc(s);return parseFloat(s.replace(',','.'))};
+function resolveAmt(el){const v=el.value.trim();if(v[0]==='='||/[+\-*/()]/.test(v.slice(1))){const r=calc(v[0]==='='?v.slice(1):v);el.value=isNaN(r)?'':f2(r);if(isNaN(r))el.placeholder='Operación no válida'}if(M&&el.id==='amt')M.amount=el.value;if(R&&el.id==='ra')R.amount=el.value}
+function insOp(op,id){
+ const el=document.getElementById(id||'amt');if(!el)return;
+ let v=el.value.trim();
+ if(op==='='){
+  if(!v)return;
+  const expr=v[0]==='='?v.slice(1):v;
+  const r=calc(expr);
+  if(!isNaN(r)){el.value=f2(r);if(M&&el.id==='amt')M.amount=el.value;if(R&&el.id==='ra')R.amount=el.value}
+  el.focus();return;
+ }
+ el.value=v+op;
+ if(M&&el.id==='amt')M.amount=el.value;
+ if(R&&el.id==='ra')R.amount=el.value;
+ el.focus();
+}
 function calcMode(){const a=$('#amt');a.inputMode='text';if(a.value[0]!=='=')a.value='='+a.value;a.focus()}
 const dtot=n=>(S.debtTot||{})[n]||0;
 const debtPaid=n=>S.tx.filter(t=>t.type==='debt'&&t.cat===n).reduce((a,t)=>a+t.amount,0);   // todos los pagos del concepto, de cualquier mes
@@ -518,15 +573,64 @@ function ahorroView(l){
  return `${closeNote()}<details class="acc" ${(V.op||{}).ahorro?'open':''} ontoggle="(V.op=V.op||{}).ahorro=this.open"><summary><i class="dot" style="background:var(--sav)"></i>Ahorro<b>${eur(s)}</b></summary><div class="card"><h2>Objetivos de ahorro</h2><div class="f2"><span>Objetivo anual ${V.y}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="0 €" value="${f2(S.goalY||null)}" onchange="setGoal('Y',this.value)" aria-label="Objetivo de ahorro anual"></div>${bar(ys,gy,'--inc')}<div class="leg"><span>${gy?`${eur(ys)} de ${eur(gy)} · ${pc(ys,gy)}`:'Define tu objetivo anual'}</span></div><div class="f2" style="margin-top:14px"><span>Objetivo de ${MN[V.m].toLowerCase()}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="${gy?f2(Math.round(gy/12*100)/100):'0 €'}" value="${f2((S.goalMo||{})[key()])}" onchange="setGoal('M',this.value)" aria-label="Objetivo de ahorro mensual"></div>${bar(s,gm,'--sav')}<div class="leg"><span>${gm?`${eur(s)} de ${eur(gm)} este mes`:'Vacío = objetivo anual ÷ 12. Ajústalo en meses de paga extra.'}</span></div></div>${potsCard()}</details>${[...typesOf('sav'),...typesOf('inv')].map(k=>`<details class="acc" ${(V.op||{})['ah_'+k]?'open':''} ontoggle="(V.op=V.op||{})['ah_${k}']=this.open"><summary><i class="dot" style="background:${T[k].c}"></i>${esc(T[k].n)}<b>${eur(sum(l,k))}</b></summary>${section(l,k)}</details>`).join('')}`;
 }
 const RL={fixed:'Gasto fijo',semi:'Gasto semifijo',var:'Gasto variable',invest:'Inversión'};
-function openSettings(){SM=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['con','🏷️','Conceptos'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad (JSON)']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
-function openSet(k){RMSG='';SM=k;CMSG='';CARM=null;drawSet()}
+let CON_ONLY=null,CAT_MSG='',CAT_G='exp';
+function openSettings(){SM=null;CON_ONLY=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['cats','🗂️','Categorías'],['con','🏷️','Conceptos'],['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad (JSON)']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
+function openSet(k){RMSG='';SM=k;CMSG='';CARM=null;CON_ONLY=null;CAT_MSG='';drawSet()}
 function drawSet(){
- const t={banks:'Bancos',modes:'Modos de pago',look:'Apariencia',recs:'Recurrencias globales',exp:'Copia de seguridad (JSON)',con:'Gestión de conceptos'}[SM];
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${t}"><h2 style="margin:0 0 10px;font-size:18px">${t}</h2>${SM==='recs'?globalRecs():SM==='exp'?expBody():SM==='con'?conBody():setBody(SM)}<button class="del" style="color:var(--mute)" onclick="openSettings()">‹ Volver a ajustes</button></div>`;
+ const t={cats:'Categorías',banks:'Bancos',modes:'Modos de pago',look:'Apariencia',recs:'Recurrencias globales',exp:'Copia de seguridad (JSON)',con:CON_ONLY?'Conceptos · '+T[CON_ONLY].n:'Gestión de conceptos'}[SM];
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${t}"><h2 style="margin:0 0 10px;font-size:18px">${t}</h2>${SM==='recs'?globalRecs():SM==='exp'?expBody():SM==='con'?conBody():SM==='cats'?catsBody():setBody(SM)}<button class="del" style="color:var(--mute)" onclick="${CON_ONLY?'closeSheet()':'openSettings()'}">${CON_ONLY?'Cerrar':'‹ Volver a ajustes'}</button></div>`;
+}
+function editCatMeta(k,field,val){
+ CAT_MSG='';val=String(val).trim();
+ if(k==='sav'){
+  S.savMeta=S.savMeta||{n:SAV_META.n,Def:SAV_META.Def};
+  if(field==='n'&&val){S.savMeta.n=val;SAV_META.n=val}
+  if(field==='c'){setCol('k:sav',val);return}
+  save();render();return;
+ }
+ if(!T[k])return;
+ S.tmeta=S.tmeta||{};S.tmeta[k]=S.tmeta[k]||{...T[k]};
+ if(field==='n'&&val){
+  S.tmeta[k].n=val;S.tmeta[k].s=val.length>12?val.slice(0,10)+'.':val;
+  T[k].n=val;T[k].s=S.tmeta[k].s;
+  CAT_MSG=`Categoría renombrada a «${val}».`;
+ }else if(field==='c'){
+  setCol('k:'+k,val);return;
+ }
+ save();render();
+}
+function addMainCat(){
+ const n=($('#new-cat-n')||{}).value?.trim(),col=($('#new-cat-c')||{}).value||'#5B7FA5',g=CAT_G||'exp';
+ if(!n){if($('#new-cat-n'))$('#new-cat-n').focus();return}
+ if(Object.values(T).some(x=>x.n.toLowerCase()===n.toLowerCase())){CAT_MSG='Ya existe una categoría con ese nombre.';drawSet();return}
+ const id='cat_'+Date.now(),v='--'+id;
+ const meta={n,s:n.length>12?n.slice(0,10)+'.':n,c:`var(${v})`,Def:col,v,g,sg:g==='inc'?'+':'−',d:g==='inc'?'Ingresos de '+n:g==='inv'?'Inversiones en '+n:g==='sav'?'Ahorro en '+n:'Gastos de '+n,custom:true};
+ S.tmeta=S.tmeta||{};S.tmeta[id]=meta;
+ CATS[id]=[['General','🏷️']];
+ S.colors=S.colors||{};S.colors['k:'+id]=col;
+ CAT_MSG=`✓ Categoría «${n}» creada.`;
+ save();render();
+}
+function delMainCat(k){
+ if(!T[k]||!T[k].custom)return;
+ const used=S.tx.filter(t=>t.type===k).length;
+ if(used>0){CAT_MSG=`No se puede eliminar «${T[k].n}» porque tiene ${used} movimiento(s).`;drawSet();return}
+ delete S.tmeta[k];delete CATS[k];if(S.colors)delete S.colors['k:'+k];
+ CAT_MSG='Categoría eliminada.';save();render();
+}
+function catsBody(){
+ const C=S.colors||{},BK=getBK(),GL={exp:'Gasto',inc:'Ingreso',inv:'Inversión',sav:'Ahorro'};
+ const rows=allTypes().map(k=>{
+  const col=C['k:'+k]||(BK[k]&&BK[k][2])||'#5B7FA5';
+  return `<div class="f2" style="padding:6px 0;border-bottom:1px solid var(--line)"><input type="color" class="cin" value="${col}" onchange="editCatMeta('${k}','c',this.value)" aria-label="Color"><input class="bi" style="text-align:left;flex:1" value="${esc(T[k].n)}" maxlength="28" onchange="editCatMeta('${k}','n',this.value)" aria-label="Nombre"><span class="pd" style="color:${T[k].c}">${GL[T[k].g]||'Gasto'}</span>${T[k].custom?`<button class="chip" onclick="delMainCat('${k}')">✕</button>`:''}</div>`;
+ }).join('');
+ const savCol=C['k:sav']||SAV_META.Def||'#82916A';
+ const savRow=`<div class="f2" style="padding:6px 0;border-bottom:1px solid var(--line)"><input type="color" class="cin" value="${savCol}" onchange="editCatMeta('sav','c',this.value)" aria-label="Color"><input class="bi" style="text-align:left;flex:1" value="${esc(SAV_META.n)}" maxlength="28" onchange="editCatMeta('sav','n',this.value)" aria-label="Nombre"><span class="pd" style="color:var(--sav)">Ahorro</span></div>`;
+ return `<small style="color:var(--mute);font-weight:600">Modifica el nombre y color de las categorías o crea nuevas definiendo su tipología.</small>${CAT_MSG?`<div class="note" style="background:var(--bg);margin:10px 0;font-size:13px" role="status">${esc(CAT_MSG)}</div>`:''}<div style="margin:8px 0">${rows}${savRow}</div><div class="lbl" style="margin-top:14px">Crear nueva categoría</div><div class="seg" style="margin:6px 0 10px">${[['exp','Gasto'],['inc','Ingreso'],['inv','Inversión'],['sav','Ahorro']].map(([g,lbl])=>`<button class="${CAT_G===g?'on':''}" ${CAT_G===g?'style="background:var(--brand)"':''} onclick="CAT_G='${g}';drawSet()">${lbl}</button>`).join('')}</div><div class="f2"><input type="color" id="new-cat-c" class="cin" value="#5B7FA5" aria-label="Color"><input id="new-cat-n" class="bi" style="text-align:left;flex:1" placeholder="Nombre (ej. Mascotas, Formación...)" maxlength="28"><button class="chip on" onclick="addMainCat()">＋ Crear</button></div>`;
 }
 function globalRecs(){
- const o=['fixed','semi','var','invest'],rs=[...(S.rec||[])].sort((a,b)=>o.indexOf(a.type)-o.indexOf(b.type));
- return `${applyAllBtn()}${rs.length?rs.map(r=>`<button class="row" onclick="editGRec(${r.id})"><span class="ico" style="background:color-mix(in srgb,${T[r.type].c} 18%,transparent)">${icon(r.type,r.cat)}</span><span class="t"><b>${esc(r.cat)} <span class="pd" style="margin-left:6px;color:${T[r.type].c}">${RL[r.type]}</span></b><small>${r.times>1?r.times+' veces · días ':'día '}${r.days.slice(0,r.times).join(', ')} · ${esc(r.bank)}${(r.skip||[]).includes(key())?' · omitido este mes':''}</small></span><span class="amt">${eur(r.amount)}</span></button>`).join(''):'<div class="empty"><big>🔁</big>Aún no hay recurrencias.</div>'}<div class="f2" style="gap:8px;margin:8px 0"><button class="cp" onclick="newGRec('fixed')">＋ Gasto fijo</button><button class="cp" onclick="newGRec('invest')">＋ Inversión</button></div><label class="f2"><span>Aplicarlos solos al abrir el mes</span><input type="checkbox" ${S.auto?'checked':''} onchange="S.auto=this.checked;save()" style="width:22px;height:22px"></label>`;
+ const o=allTypes(),rs=[...(S.rec||[])].sort((a,b)=>o.indexOf(a.type)-o.indexOf(b.type));
+ return `${applyAllBtn()}${rs.length?rs.map(r=>`<button class="row" onclick="editGRec(${r.id})"><span class="ico" style="background:color-mix(in srgb,${(T[r.type]||T.fixed).c} 18%,transparent)">${icon(r.type,r.cat)}</span><span class="t"><b>${esc(r.cat)} <span class="pd" style="margin-left:6px;color:${(T[r.type]||T.fixed).c}">${esc((T[r.type]||T.fixed).s)}</span></b><small>${r.times>1?r.times+' veces · días ':'día '}${r.days.slice(0,r.times).join(', ')}${r.bank?' · '+esc(r.bank):r.mode?' · '+esc(r.mode):''}${(r.skip||[]).includes(key())?' · omitido este mes':''}</small></span><span class="amt">${eur(r.amount)}</span></button>`).join(''):'<div class="empty"><big>🔁</big>Aún no has definido ninguno.</div>'}<div class="f2" style="gap:8px;margin:8px 0;flex-wrap:wrap"><button class="cp" style="flex:1" onclick="newGRec('fixed')">＋ Gasto fijo</button><button class="cp" style="flex:1" onclick="newGRec('debt')">＋ Deuda</button><button class="cp" style="flex:1" onclick="newGRec('invest')">＋ Inversión</button></div><label class="f2"><span>Aplicarlos solos al abrir el mes</span><input type="checkbox" ${S.auto?'checked':''} onchange="S.auto=this.checked;save()" style="width:22px;height:22px"></label>`;
 }
 let RMSG='';
 function dayPick(d,i){   // calendario del mes que estás viendo; solo cuenta el día (el cargo se repite cada mes)
