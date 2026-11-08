@@ -121,7 +121,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mi mes">
 <meta name="theme-color" content="#F6F4FB" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#17142A" media="(prefers-color-scheme: dark)"></head>
+<meta name="theme-color" content="#17142A" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Mi mes · Finanzas&quot;,&quot;short_name&quot;:&quot;Mi mes&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;background_color&quot;:&quot;#17142A&quot;,&quot;theme_color&quot;:&quot;#1F5F6B&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;logo.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}"></head>
 <body>
 <div id="app"></div>
 <div id="sheet"></div>
@@ -135,7 +138,18 @@ const DEF={
  invest:[['MSCI','📈'],['Vanguard','📊'],['Otras inversiones','💎']]
 };
 let CATS=JSON.parse(JSON.stringify(DEF));
-const T={income:{n:'Ingresos',s:'Ingreso',c:'var(--inc)',sg:'+',d:'Nóminas y otros ingresos del mes.'},fixed:{n:'Gastos fijos',s:'Fijo',c:'var(--exp)',sg:'−',d:'Los de todos los meses, siempre del mismo importe.'},semi:{n:'Gastos semifijos',s:'Semifijo',c:'var(--semi)',sg:'−',d:'Cada mes, pero con importe variable.'},var:{n:'Gastos variables',s:'Variable',c:'var(--vr)',sg:'−',d:'Todo lo que no entra en fijos ni semifijos.'},debt:{n:'Deudas',s:'Deuda',c:'var(--debt)',sg:'−',d:'Cuotas y devoluciones de deudas por concepto.'},invest:{n:'Inversiones',s:'Inversión',c:'var(--inv)',sg:'−',d:'Cuenta como salida: se resta de tus ingresos para calcular el ahorro.'}};
+const T_DEF={
+ income:{n:'Ingresos',s:'Ingreso',c:'var(--inc)',Def:'#82916A',v:'--inc',g:'inc',sg:'+',d:'Nóminas y otros ingresos del mes.'},
+ fixed:{n:'Gastos fijos',s:'Fijo',c:'var(--exp)',Def:'#6F2E44',v:'--exp',g:'exp',sg:'−',d:'Los de todos los meses, siempre del mismo importe.'},
+ semi:{n:'Gastos semifijos',s:'Semifijo',c:'var(--semi)',Def:'#B87550',v:'--semi',g:'exp',sg:'−',d:'Cada mes, pero con importe variable.'},
+ var:{n:'Gastos variables',s:'Variable',c:'var(--vr)',Def:'#D0A34F',v:'--vr',g:'exp',sg:'−',d:'Todo lo que no entra en fijos ni semifijos.'},
+ debt:{n:'Deudas',s:'Deuda',c:'var(--debt)',Def:'#79566B',v:'--debt',g:'exp',sg:'−',d:'Cuotas y devoluciones de deudas por concepto.'},
+ invest:{n:'Inversiones',s:'Inversión',c:'var(--inv)',Def:'#5B7FA5',v:'--inv',g:'inv',sg:'−',d:'Cuenta como salida: se resta de tus ingresos para calcular el ahorro.'}
+};
+let T=JSON.parse(JSON.stringify(T_DEF)),SAV_META={n:'Ahorro',Def:'#82916A'};
+const typesOf=g=>Object.keys(T).filter(k=>T[k].g===g);
+const allTypes=()=>[...typesOf('inc'),...typesOf('exp'),...typesOf('inv'),...typesOf('sav')];
+const outTypes=()=>[...typesOf('exp'),...typesOf('inv'),...typesOf('sav')];
 let BANKS=[],MODES=[];
 const pc=(a,b)=>b>0?Math.round(a/b*100)+'%':'–';
 const pct1=(a,b)=>b>0?(Math.round(a/b*1000)/10).toLocaleString('es-ES')+'%':'–';
@@ -146,7 +160,24 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const $=s=>document.querySelector(s);
 const now=new Date();
 let S={tx:[]},V={y:now.getFullYear(),m:now.getMonth(),tab:'resumen',vis:{i:true,e:true,v:true,a:true}},M=null;
-function fixup(){if(!CATS.debt||!CATS.debt.length)CATS.debt=[['Coche','🚗'],['Préstamo','🏦'],['Tarjeta','💳'],['Otras deudas','🧾']];S.tx.forEach(t=>{if(t.type==='expense')t.type='var';if(t.type==='invest'){if(t.cat==='ETF 1')t.cat='MSCI';if(t.cat==='ETF 2')t.cat='Vanguard'}});CATS.invest=CATS.invest.map(c=>c[0]==='ETF 1'?['MSCI',c[1]]:c[0]==='ETF 2'?['Vanguard',c[1]]:c);syncLists()}
+function syncTypes(){
+ T=JSON.parse(JSON.stringify(T_DEF));
+ if(S.tmeta){for(const [k,v] of Object.entries(S.tmeta)){if(T[k])Object.assign(T[k],v);else T[k]=v}}
+ SAV_META=Object.assign({n:'Ahorro',Def:'#82916A'},S.savMeta||{});
+ for(const k of Object.keys(T)){if(!CATS[k]||!CATS[k].length)CATS[k]=DEF[k]?JSON.parse(JSON.stringify(DEF[k])):[['General','🏷️']]}
+}
+function fixup(){
+ syncTypes();
+ S.tx.forEach(t=>{
+  if(t.type==='expense')t.type='var';
+  if(t.bank==='Efectivo'){t.bank='';if(!t.mode)t.mode='Efectivo'}
+  if(t.mode==='Efectivo')t.bank='';
+  if(t.type==='invest'){if(t.cat==='ETF 1')t.cat='MSCI';if(t.cat==='ETF 2')t.cat='Vanguard'}
+ });
+ (S.rec||[]).forEach(r=>{if(r.bank==='Efectivo'){r.bank='';if(!r.mode)r.mode='Efectivo'}if(r.mode==='Efectivo')r.bank=''});
+ CATS.invest=CATS.invest.map(c=>c[0]==='ETF 1'?['MSCI',c[1]]:c[0]==='ETF 2'?['Vanguard',c[1]]:c);
+ syncLists();
+}
 // ---------- Persistencia local (localStorage) ----------
 try{const r=localStorage.getItem('mimes_v1');if(r){S=JSON.parse(r);if(S.cats)CATS=S.cats}}catch(e){}
 S=Object.assign({tx:[],rec:[],pots:[]},S);
@@ -162,7 +193,7 @@ function go(t){V.tab=t;V.mode='month';render();scrollTo(0,0)}
 
 function rowH(t){
  const c=T[t.type].c;
- const s=(t.type==='income')===(t.amount>=0)?'+':'−',pd=t.type==='fixed'?`<span class="pd ${t.paid?'ok':''}" onclick="event.stopPropagation();togglePaid(${t.id})">${t.paid?'✓ Pagado':'Pendiente'}</span>`:'';
+ const isInc=T[t.type]&&T[t.type].g==='inc',s=isInc===(t.amount>=0)?'+':'−',pd=['fixed','debt'].includes(t.type)?`<span class="pd ${t.paid?'ok':''}" onclick="event.stopPropagation();togglePaid(${t.id})">${t.paid?'✓ Pagado':'Pendiente'}</span>`:'';
  return `<div class="row" role="button" tabindex="0" onclick="openSheet('${t.type}',${t.id})"><span class="ico" style="background:color-mix(in srgb,${c} 18%,transparent)">${icon(t.type,t.cat)}</span><span class="t"><b>${esc(t.cat)}</b><small>${fd(t.date)}${t.bank?' · '+esc(t.bank):''}${t.mode?' · '+esc(t.mode):''}${t.note?' · '+esc(t.note):''}</small></span>${pd}<span class="amt" style="color:${c}">${s}${eur(Math.abs(t.amount))}</span></div>`;
 }
 function donut(items,total,label){
@@ -174,32 +205,42 @@ function byCat(l,ty){
  const m={};l.filter(t=>t.type===ty).forEach(t=>m[t.cat]=(m[t.cat]||0)+t.amount);
  return Object.entries(m).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).map(([n,v])=>({n,v,c:(S.colors||{})['c:'+ty+':'+n]||PAL[Math.max(0,CATS[ty].findIndex(x=>x[0]===n))%PAL.length],e:icon(ty,n)}));
 }
+const sumG=(l,g)=>typesOf(g).reduce((a,k)=>a+sum(l,k),0);
 function resumen(l){
- const inc=sum(l,'income'),fx=sum(l,'fixed'),sm=sum(l,'semi'),vr=sum(l,'var'),db=sum(l,'debt'),exp=fx+sm+vr+db,inv=sum(l,'invest'),sav=inc-exp-inv;
- const base=Math.max(inc,exp+inv)||1,pct=inc>0?Math.round(sav/inc*100):0;
- 
- return `<div class="hero"><small>Ahorro del mes</small><div class="big ${sav<0?'neg':''}">${eur(sav)}</div><small>${inc>0?(sav>=0?`Es el ${pct}% de tus ingresos`:'Gastas e inviertes más de lo que ingresas'):'Añade tus ingresos para ver tu ahorro'}</small></div>
- <div class="tri"><button class="mini" style="text-align:left" onclick="go('income')"><small><i class="dot" style="background:var(--inc)"></i>Ingresos</small><b>${eur(inc)}</b></button><button class="mini" style="text-align:left" onclick="go('gastos')"><small><i class="dot" style="background:var(--exp)"></i>Gastos</small><b>${eur(exp)}</b></button><button class="mini" style="text-align:left" onclick="go('ahorro')"><small><i class="dot" style="background:var(--inv)"></i>Inversión</small><b>${eur(inv)}</b></button></div>
- <div class="card"><h2>Informe mensual</h2>${monthChart([[fx,'--exp','Gastos fijos','Fijos'],[sm,'--semi','Gastos semifijos','Semi'],[vr,'--vr','Gastos variables','Var.'],[db,'--debt','Deudas','Deuda'],[inv,'--inv','Inversión','Inv.'],...(sav>0?[[sav,'--sav','Ahorro','Ahorro']]:[])],inc)}
- <div style="margin-top:10px">${[['fixed',fx],['semi',sm],['var',vr],['debt',db],['invest',inv]].map(([k,v])=>`<button class="blk" onclick="go('${k==='invest'?'ahorro':'gastos'}')"><i class="dot" style="background:${T[k].c}"></i>${T[k].n}<b>${eur(v)} <small style="color:var(--mute)">${pc(v,inc)}</small></b></button>`).join('')}<div class="blk"><i class="dot" style="background:var(--sav)"></i>Ahorro<b>${eur(sav)}</b></div></div></div>
+ const inc=sumG(l,'inc'),exp=sumG(l,'exp'),inv=sumG(l,'inv'),sav=ah(l);
+ const pct=inc>0?Math.round(sav/inc*100):0;
+ const outK=[...typesOf('exp'),...typesOf('inv'),...typesOf('sav')];
+ const chartIt=[...outK.map(k=>[sum(l,k),T[k].v,T[k].n,T[k].s]),...(sav>0?[[sav,'--sav',SAV_META.n,SAV_META.n]]:[])];
+ return `<div class="hero"><small>${esc(SAV_META.n)} del mes</small><div class="big ${sav<0?'neg':''}">${eur(sav)}</div><small>${inc>0?(sav>=0?`Es el ${pct}% de tus ingresos`:'Gastas e inviertes más de lo que ingresas'):'Añade tus ingresos para ver tu ahorro'}</small></div>
+ <div class="tri"><button class="mini" style="text-align:left" onclick="go('income')"><small><i class="dot" style="background:var(--inc)"></i>${esc(T.income.n)}</small><b>${eur(inc)}</b></button><button class="mini" style="text-align:left" onclick="go('gastos')"><small><i class="dot" style="background:var(--exp)"></i>Gastos</small><b>${eur(exp)}</b></button><button class="mini" style="text-align:left" onclick="go('ahorro')"><small><i class="dot" style="background:var(--inv)"></i>${esc(T.invest.n)}</small><b>${eur(inv)}</b></button></div>
+ <div class="card"><h2>Informe mensual</h2>${monthChart(chartIt,inc)}
+ <div style="margin-top:10px">${outK.map(k=>{const v=sum(l,k);return `<button class="blk" onclick="go('${T[k].g==='exp'?'gastos':'ahorro'}')"><i class="dot" style="background:${T[k].c}"></i>${esc(T[k].n)}<b>${eur(v)} <small style="color:var(--mute)">${pc(v,inc)}</small></b></button>`}).join('')}<div class="blk"><i class="dot" style="background:var(--sav)"></i>${esc(SAV_META.n)}<b>${eur(sav)}</b></div></div></div>
  ${bankCard(l)}`;
 }
+function quickConCard(ty){
+ return `<div class="card"><div class="f2"><div><b>🏷️ Conceptos de ${esc(T[ty].n.toLowerCase())}</b><br><small style="color:var(--mute);font-weight:600">${(CATS[ty]||[]).map(c=>c[1]+' '+esc(c[0])).join(' · ')}</small></div><button class="chip on" style="flex:none" onclick="openConFor('${ty}')">＋ Añadir / Editar</button></div></div>`;
+}
+function openConFor(ty){
+ CON_ONLY=ty;SM='con';CMSG='';CARM=null;
+ (V.op=V.op||{})['con_'+ty]=true;
+ drawSet();
+}
 function section(l,ty){
- const tot=sum(l,ty),items=l.filter(t=>t.type===ty),cats=byCat(l,ty);
- const note=T[ty].d,inc=sum(l,'income'),all=sum(l,'fixed')+sum(l,'semi')+sum(l,'var')+sum(l,'debt')+sum(l,'invest'),pend=items.filter(t=>!t.paid).reduce((a,t)=>a+t.amount,0);
- return `<div class="card"><div class="total"><div><small style="color:var(--mute);font-weight:700">${T[ty].n} del mes</small><br><b style="color:${T[ty].c}">${eur(tot)}</b></div></div><small style="color:var(--mute);font-weight:600">${note}</small>${ty==='income'?'':`<div class="leg"><span>${pc(tot,inc)} de tus ingresos</span><span>${pc(tot,all)} del gasto total</span>${ty==='fixed'?`<span>Por pagar: ${eur(pend)}</span>`:''}</div>`}</div>
- ${recBtn(ty)}${copyBtn(ty)}
- ${cats.length&&ty!=='income'?`<div class="card"><h2>Por concepto</h2><div class="donutwrap">${donut(cats,tot,'total')}<div class="cl">${cats.map(c=>`<div><i class="dot" style="background:${c.c}"></i><span class="n">${c.e} ${esc(c.n)}</span><em>${eur(c.v)}</em><small style="color:var(--mute);width:34px;text-align:right">${Math.round(c.v/tot*100)}%</small></div>`).join('')}</div></div></div>`:''}
- <div class="card"><h2>Movimientos</h2>${items.length?items.map(rowH).join(''):`<div class="empty"><big>${ty==='income'?'💸':'🌱'}</big>Todavía no hay ${T[ty].n.toLowerCase()} este mes.</div>`}</div>${ty==='income'?trCard(l):''}`;
+ const tot=sum(l,ty),items=l.filter(t=>t.type===ty),cats=byCat(l,ty),isInc=T[ty].g==='inc';
+ const note=T[ty].d,inc=sumG(l,'inc'),all=outTypes().reduce((a,k)=>a+sum(l,k),0),pend=items.filter(t=>!t.paid).reduce((a,t)=>a+t.amount,0);
+ return `<div class="card"><div class="total"><div><small style="color:var(--mute);font-weight:700">${esc(T[ty].n)} del mes</small><br><b style="color:${T[ty].c}">${eur(tot)}</b></div></div><small style="color:var(--mute);font-weight:600">${esc(note)}</small>${isInc?'':`<div class="leg"><span>${pc(tot,inc)} de tus ingresos</span><span>${pc(tot,all)} del gasto total</span>${['fixed','debt'].includes(ty)?`<span>Por pagar: ${eur(pend)}</span>`:''}</div>`}</div>
+ ${ty==='debt'?debtCard():''}${recBtn(ty)}${copyBtn(ty)}${quickConCard(ty)}
+ ${cats.length&&!isInc?`<div class="card"><h2>Por concepto</h2><div class="donutwrap">${donut(cats,tot,'total')}<div class="cl">${cats.map(c=>`<div><i class="dot" style="background:${c.c}"></i><span class="n">${c.e} ${esc(c.n)}</span><em>${eur(c.v)}</em><small style="color:var(--mute);width:34px;text-align:right">${Math.round(c.v/tot*100)}%</small></div>`).join('')}</div></div></div>`:''}
+ <div class="card"><h2>Movimientos</h2>${items.length?items.map(rowH).join(''):`<div class="empty"><big>${isInc?'💸':'🌱'}</big>Todavía no hay ${esc(T[ty].n.toLowerCase())} este mes.</div>`}</div>${ty==='income'?trCard(l):''}`;
 }
 function prevKey(){const d=new Date(V.y,V.m-1,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function pending(ty){const cur=S.tx.filter(t=>t.date.slice(0,7)===key()&&t.type===ty);return S.tx.filter(t=>t.date.slice(0,7)===prevKey()&&t.type===ty&&!cur.some(c=>c.cat===t.cat&&c.note===t.note))}
-function copyBtn(ty){if(!['fixed','invest','income'].includes(ty))return'';const n=pending(ty).length;return n?`<button class="cp" onclick="copyPrev('${ty}')">↻ Traer ${n} ${n>1?'movimientos':'movimiento'} del mes anterior</button>`:''}
+function copyBtn(ty){if(!['fixed','debt','invest','income'].includes(ty)&&T[ty].g==='exp')return'';const n=pending(ty).length;return n?`<button class="cp" onclick="copyPrev('${ty}')">↻ Traer ${n} ${n>1?'movimientos':'movimiento'} del mes anterior</button>`:''}
 function copyPrev(ty){const last=new Date(V.y,V.m+1,0).getDate();pending(ty).forEach((t,i)=>{const d=Math.min(+t.date.slice(8),last);S.tx.push({...t,paid:false,id:Date.now()+i,date:key()+'-'+String(d).padStart(2,'0')})});save();render()}
-function render(){applyColors();autoApply();if(['banks','modes','look','con','exp'].includes(SM))drawSet();if(V.mode==='year')return renderYear();
+function render(){applyColors();autoApply();if(['banks','modes','look','con','cats','exp'].includes(SM))drawSet();if(V.mode==='year')return renderYear();
  const l=mtx(),mn=MN[V.m]+' '+V.y;
  $('#app').innerHTML=`<header><button class="arr" aria-label="Mes anterior" onclick="move(-1)">‹</button><h1>${mn}</h1><button class="arr" aria-label="Mes siguiente" onclick="move(1)">›</button></header>${modeSeg()}
- ${V.tab==='resumen'?resumen(l):V.tab==='income'?section(l,'income'):V.tab==='gastos'?gastos(l):V.tab==='bud'?budView(l):V.tab==='ahorro'?ahorroView(l):resumen(l)}
+ ${V.tab==='resumen'?resumen(l):V.tab==='income'?incView(l):V.tab==='gastos'?gastos(l):V.tab==='bud'?budView(l):V.tab==='ahorro'?ahorroView(l):resumen(l)}
  <div class="foot"><button onclick="openColors()">🎨 Colores</button> · Datos en este dispositivo · <button class="rs" onclick="resetAll()">Borrar todo</button></div>
  ${V.tab==='bud'?'':`<button class="fab" aria-label="Añadir movimiento" onclick="openSheet(V.tab==='income'?'income':V.tab==='ahorro'?'invest':'semi')">+</button>`}
  <nav><div>${NAV.map(n=>`<button class="${V.tab===n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('')}</div></nav>`;
@@ -207,7 +248,7 @@ function render(){applyColors();autoApply();if(['banks','modes','look','con','ex
 function defDate(){const t=new Date();return (t.getFullYear()===V.y&&t.getMonth()===V.m)?t.toISOString().slice(0,10).replace(/^(\d{4}-\d{2}-\d{2})$/,()=>`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`):key()+'-01'}
 function openSheet(ty,id){
  const t=id?S.tx.find(x=>x.id===id):null;
- M={type:t?t.type:ty,cat:t?t.cat:null,id:id||null,amount:t?String(Math.abs(t.amount)).replace('.',','):'',date:t?t.date:defDate(),note:t?t.note:'',bank:t?t.bank||'':'BBVA',bank2:t?t.bank2||'':'Trade Republic',mode:t?t.mode||'':'Tarjeta',paid:t?!!t.paid:false,refund:!!t&&t.amount<0};
+ const defMode=t?t.mode||'':'Tarjeta';M={type:t?t.type:ty,cat:t?t.cat:null,id:id||null,amount:t?String(Math.abs(t.amount)).replace('.',','):'',date:t?t.date:defDate(),note:t?t.note:'',bank:t?(t.bank||''):(defMode==='Efectivo'?'':(BANKS[0]||'BBVA')),bank2:t?t.bank2||'':(BANKS[1]||BANKS[0]||'Trade Republic'),mode:defMode,paid:t?!!t.paid:false,refund:!!t&&t.amount<0};
  drawSheet();
 }
 function grab(){const a=$('#amt');if(a){M.amount=a.value;M.date=$('#dt').value;M.note=$('#nt').value}}
@@ -217,14 +258,15 @@ function drawSheet(){
  if(M.type==='transfer')return drawTr();
  const c=T[M.type].c,af=M.id||M.drawn?'':'autofocus';M.drawn=true;
  $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${M.id?'Editar':'Nuevo'} movimiento">
- <div class="seg">${['income','fixed','semi','var','debt','invest'].map(k=>`<button class="${M.type===k?'on':''}" ${M.type===k?`style="background:${T[k].c}"`:''} onclick="setType('${k}')">${T[k].s}</button>`).join('')}</div>
+ <div class="seg" style="flex-wrap:wrap">${allTypes().map(k=>`<button style="min-width:18%;${M.type===k?`background:${T[k].c}`:''}" class="${M.type===k?'on':''}" onclick="setType('${k}')">${esc(T[k].s)}</button>`).join('')}</div>
  ${M.type==='income'?org(false):''}
  <input id="amt" class="amtin" inputmode="decimal" placeholder="0,00 €" value="${esc(M.amount)}" style="color:${c}" onblur="resolveAmt(this)" ${af}>
  <button class="chip new" style="display:block;margin:0 auto 10px" onclick="calcMode()">＝ Calculadora (ej. =50+20/2)</button>
  <div class="chips">${CATS[M.type].map((x,i)=>M.manage?`<button class="chip" onclick="rmCat(${i})">${x[1]} ${esc(x[0])} ✕</button>`:`<button class="chip ${M.cat===x[0]?'on':''}" onclick="pickCat(${i})">${x[1]} ${esc(x[0])}</button>`).join('')}<button class="chip new" onclick="grab();M.adding=!M.adding;M.manage=false;drawSheet()">＋ Nueva</button><button class="chip new" onclick="grab();M.manage=!M.manage;M.adding=false;drawSheet()">${M.manage?'Listo':'✎ Editar'}</button></div>
  ${M.adding?`<div class="f"><input id="cn" placeholder="Nuevo concepto" maxlength="24"><input id="ce" placeholder="🙂" maxlength="4" style="flex:none;width:64px;text-align:center"><button class="chip on" style="margin-bottom:12px" onclick="addCat()">Añadir</button></div>`:''}
- <div class="lbl">Banco</div><div class="chips">${BANKS.map((b,i)=>`<button class="chip ${M.bank===b?'on':''}" data-v="${esc(b)}" onclick="setM('bank',this.dataset.v)"><i class="dot" style="background:${bcol(b,i)}"></i> ${esc(b)}</button>`).join('')}</div>
- ${['fixed','semi','var','debt'].includes(M.type)?`<div class="lbl">Modo de pago</div><div class="chips">${MODES.map((b,i)=>`<button class="chip ${M.mode===b?'on':''}" data-v="${esc(b)}" onclick="setM('mode',this.dataset.v)"><i class="dot" style="background:${mcol(b,i)}"></i> ${esc(b)}</button>`).join('')}</div><div class="chips">${M.type==='fixed'?`<button class="chip ${M.paid?'on':''}" onclick="setM('paid',${!M.paid})">${M.paid?'✓ Pagado':'Pendiente de pago'}</button>`:''}<button class="chip ${M.refund?'on':''}" onclick="setM('refund',${!M.refund})">↩ Es un reembolso</button></div>`:''}
+ ${T[M.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${MODES.map((b,i)=>`<button class="chip ${M.mode===b?'on':''}" data-v="${esc(b)}" onclick="setM('mode',this.dataset.v)"><i class="dot" style="background:${mcol(b,i)}"></i> ${esc(b)}</button>`).join('')}</div>`:''}
+ ${T[M.type].g==='exp'&&M.mode&&M.mode.toLowerCase()==='efectivo'?`<div class="lbl">Banco</div><small style="display:block;color:var(--mute);font-weight:700;margin:4px 0 12px">💵 Pago en efectivo (sin cargo a ningún banco)</small>`:`<div class="lbl">Banco <small style="font-weight:600;color:var(--mute)">(toca de nuevo para dejar sin banco)</small></div><div class="chips">${BANKS.map((b,i)=>`<button class="chip ${M.bank===b?'on':''}" data-v="${esc(b)}" onclick="setM('bank',this.dataset.v)"><i class="dot" style="background:${bcol(b,i)}"></i> ${esc(b)}</button>`).join('')}</div>`}
+ ${T[M.type].g==='exp'?`<div class="chips">${['fixed','debt'].includes(M.type)?`<button class="chip ${M.paid?'on':''}" onclick="setM('paid',${!M.paid})">${M.paid?'✓ Pagado':'Pendiente de pago'}</button>`:''}<button class="chip ${M.refund?'on':''}" onclick="setM('refund',${!M.refund})">↩ Es un reembolso</button></div>`:''}
  <div class="f"><input id="dt" type="date" value="${M.date}"><input id="nt" placeholder="Nota (opcional)" maxlength="60" value="${esc(M.note)}"></div>
  <button class="save" style="background:${c}" onclick="saveTx()">${M.id?'Guardar cambios':'Añadir '+T[M.type].s.toLowerCase()}</button>
  ${M.id?'<button class="del" onclick="delTx()">Eliminar movimiento</button>':''}${M.id&&S.tx.find(x=>x.id===M.id&&x.rid)?'<button class="del" style="color:var(--mute)" onclick="skipTx()">Omitir recurrencia este mes</button>':''}</div>`;if(M.adding)$('#cn').focus();
@@ -235,8 +277,8 @@ function trRow(t){return `<div class="row" role="button" tabindex="0" onclick="o
 function trCard(l){return `<div class="card"><h2>Entre mis bancos</h2>${l.filter(t=>t.type==='transfer').map(trRow).join('')||'<div class="empty">Sin traspasos este mes.</div>'}<small style="color:var(--mute);font-weight:600">No cuentan como ingreso: solo mueven dinero entre tus cuentas.</small><button class="cp" style="margin-top:10px" onclick="openSheet('transfer')">＋ Añadir traspaso</button></div>`}
 function bankCard(l){
  const n=v=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
- const out=['fixed','semi','var','debt','invest'],tr=l.filter(t=>t.type==='transfer'),add=(a,t)=>a+t.amount;
- const rows=BANKS.map(b=>[b,l.filter(t=>t.type==='income'&&t.bank===b).reduce(add,0)+tr.filter(t=>t.bank2===b).reduce(add,0),l.filter(t=>out.includes(t.type)&&t.bank===b).reduce(add,0)+tr.filter(t=>t.bank===b).reduce(add,0)]);
+ const out=outTypes(),tr=l.filter(t=>t.type==='transfer'),add=(a,t)=>a+t.amount;
+ const rows=BANKS.map(b=>[b,l.filter(t=>T[t.type]&&T[t.type].g==='inc'&&t.bank===b).reduce(add,0)+tr.filter(t=>t.bank2===b).reduce(add,0),l.filter(t=>out.includes(t.type)&&t.bank===b).reduce(add,0)+tr.filter(t=>t.bank===b).reduce(add,0)]);
  const r=(b,en,sa,cl)=>`<div class="bk ${cl||''}"><span>${BANKS.includes(b)?`<i class="dot" style="background:${bcol(b,BANKS.indexOf(b))}"></i> `:''}${b}</span><span style="color:var(--inc)">${n(en)}</span><span style="color:var(--exp)">${n(sa)}</span><span${en-sa<0?' style="color:var(--exp)"':''}>${n(en-sa)}</span></div>`;
  return `<div class="card"><h2>Bancos del mes (€)</h2><div class="bk h"><span>Banco</span><span>Entra</span><span>Sale</span><span>Diferencia</span></div>${rows.map(x=>r(x[0],x[1],x[2])).join('')}${r('Total',sum(l,'income'),out.reduce((a,k)=>a+sum(l,k),0),'t')}<div class="leg"><span>Entra y sale de cada banco incluye los traspasos entre ellos.</span></div>${tr.map(t=>`<div class="row" role="button" tabindex="0" onclick="openSheet('transfer',${t.id})"><span class="ico" style="background:var(--bg)">🔁</span><span class="t"><b>${esc(t.bank)} → ${esc(t.bank2)}</b><small>${fd(t.date)}${t.note?' · '+esc(t.note):''}</small></span><span class="amt">${eur(t.amount)}</span></div>`).join('')}<button class="cp" style="margin-top:10px" onclick="openSheet('transfer')">＋ Añadir traspaso entre bancos</button></div>`;
 }
@@ -258,13 +300,26 @@ const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Sep
 const n2=v=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(v);
 const nf=v=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const f2=v=>v==null?'':String(v).replace('.',',');
-const BK={fixed:['--exp','Gastos fijos','#6F2E44'],semi:['--semi','Gastos semifijos','#B87550'],var:['--vr','Gastos variables','#D0A34F'],debt:['--debt','Deudas','#79566B'],invest:['--inv','Inversión','#5B7FA5'],sav:['--sav','Ahorro','#82916A'],income:['--inc','Ingresos','#82916A']};
+function getBK(){
+ const o={};
+ for(const [k,v] of Object.entries(T))o[k]=[v.v,v.n,v.Def||'#5B7FA5'];
+ o.sav=['--sav',SAV_META.n,SAV_META.Def||'#82916A'];
+ return o;
+}
 const bcol=(b,i)=>(S.colors||{})['b:'+b]||PAL[i%PAL.length];
-function applyColors(){const c=S.colors||{};if(S.theme)document.documentElement.dataset.theme=S.theme;for(const k in BK)document.documentElement.style[c['k:'+k]?'setProperty':'removeProperty'](BK[k][0],c['k:'+k])}
+function applyColors(){
+ syncTypes();
+ const c=S.colors||{},BK=getBK();
+ if(S.theme)document.documentElement.dataset.theme=S.theme;
+ for(const k in BK){
+  const col=c['k:'+k]||BK[k][2];
+  document.documentElement.style.setProperty(BK[k][0],col);
+ }
+}
 function setCol(k,v){S.colors=S.colors||{};S.colors[k]=v;save();render()}
 function openColors(){SM=null;
- const C=S.colors||{},row=(k,n,d)=>`<label class="crow"><span>${esc(n)}</span><input type="color" data-k="${esc(k)}" value="${C[k]||d}" oninput="setCol(this.dataset.k,this.value)"></label>`;
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Colores"><h2 style="margin:0 0 6px;font-size:18px">Colores</h2><div class="lbl">Bloques</div>${Object.entries(BK).map(([k,v])=>row('k:'+k,v[1],v[2])).join('')}${['fixed','semi','var','debt','invest'].map(t=>`<div class="lbl" style="margin-top:8px">Conceptos · ${T[t].n}</div>${CATS[t].map((c,i)=>row('c:'+t+':'+c[0],c[1]+' '+c[0],PAL[i%PAL.length])).join('')}`).join('')}<button class="del" onclick="S.colors={};save();render();openColors()">Restablecer colores</button><button class="save" onclick="closeSheet()">Listo</button></div>`;
+ const C=S.colors||{},BK=getBK(),row=(k,n,d)=>`<label class="crow"><span>${esc(n)}</span><input type="color" data-k="${esc(k)}" value="${C[k]||d}" oninput="setCol(this.dataset.k,this.value)"></label>`;
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Colores"><h2 style="margin:0 0 6px;font-size:18px">Colores</h2><div class="lbl">Categorías principales</div>${Object.entries(BK).map(([k,v])=>row('k:'+k,v[1],v[2])).join('')}${outTypes().map(t=>`<div class="lbl" style="margin-top:8px">Conceptos · ${esc(T[t].n)}</div>${(CATS[t]||[]).map((c,i)=>row('c:'+t+':'+c[0],c[1]+' '+c[0],PAL[i%PAL.length])).join('')}`).join('')}<button class="del" onclick="S.colors={};save();render();openColors()">Restablecer colores</button><button class="save" onclick="closeSheet()">Listo</button></div>`;
 }
 function monthChart(it,inc){
  const ty=(S.chart==='pie'?'pie':'bar'),tot=it.reduce((a,x)=>a+Math.max(0,x[0]),0)||1,mx=Math.max(1,...it.map(x=>x[0]));
@@ -327,15 +382,15 @@ function renderYear(){
 let uidN=0,RT='fixed',R=null,RG=false,SM=null;const uid=()=>Date.now()*100+(uidN++%100);
 function recs(ty){return (S.rec||[]).filter(r=>r.type===ty)}
 function recMissing(ty){const k=key(),o=[];recs(ty).forEach(r=>r.days.slice(0,r.times).forEach((d,j)=>{if(!(r.skip||[]).includes(k)&&!S.tx.some(t=>t.rid===r.id&&t.occ===j&&t.date.slice(0,7)===k))o.push([r,j,d])}));return o}
-function applyRec(ty){const k=key(),last=new Date(V.y,V.m+1,0).getDate();recMissing(ty).forEach(([r,j,d])=>S.tx.push({id:uid(),type:r.type,cat:r.cat,amount:r.amount,bank:r.bank,mode:r.type==='fixed'?r.mode:'',paid:false,date:k+'-'+String(Math.min(d,last)).padStart(2,'0'),note:r.note||'',rid:r.id,occ:j}));save()}
+function applyRec(ty){const k=key(),last=new Date(V.y,V.m+1,0).getDate();recMissing(ty).forEach(([r,j,d])=>{const md=['fixed','debt'].includes(r.type)||T[r.type].g==='exp'?r.mode||'':'',bk=(md.toLowerCase()==='efectivo')?'':r.bank;S.tx.push({id:uid(),type:r.type,cat:r.cat,amount:r.amount,bank:bk,mode:md,paid:false,date:k+'-'+String(Math.min(d,last)).padStart(2,'0'),note:r.note||'',rid:r.id,occ:j})});save()}
 function autoApply(){
  if(!S.auto||V.mode==='year'||!(S.rec||[]).length)return;
  const k=key(),p=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),a=p(now),b=p(new Date(now.getFullYear(),now.getMonth()+1,1));
  S.applied=S.applied||{};if((k!==a&&k!==b)||S.applied[k])return;
- applyRec('fixed');applyRec('invest');S.applied[k]=1;save();
+ ['fixed','debt','invest',...Object.keys(T)].filter((v,i,a)=>a.indexOf(v)===i).forEach(applyRec);S.applied[k]=1;save();
 }
 function recBtn(ty){
- if(ty!=='fixed'&&ty!=='invest')return'';const n=recs(ty).length,m=recMissing(ty).length;
+ if(!['fixed','debt','invest'].includes(ty)&&T[ty].g==='inc')return'';const n=recs(ty).length,m=recMissing(ty).length;
  return `<div class="card"><h2>Recurrentes</h2><div class="f2"><span style="color:var(--mute);font-weight:600">${n?n+(n>1?' definidas':' definida'):'Define los que se repiten cada mes'}</span><button class="chip on" onclick="openRecs('${ty}')">⚙ Gestionar</button></div>${m?`<button class="cp" style="margin-top:8px" onclick="applyRec('${ty}');render()">▶ Aplicar ${m} ${m>1?'cargos':'cargo'} a este mes</button>`:''}</div>`;
 }
 function openRecs(ty){RG=false;RT=ty;drawRecs()}
@@ -346,11 +401,11 @@ function drawRecs(){
 }
 function editRec(id){const r=id?(S.rec||[]).find(x=>x.id===id):null;R=r?{...r,amount:f2(r.amount),days:[...r.days],skip:[...(r.skip||[])]}:{id:null,skip:[],type:RT,cat:CATS[RT][0][0],amount:'',bank:'BBVA',mode:'Tarjeta',times:1,days:[1],note:''};drawRec()}
 function grabR(){const a=$('#ra');if(!a)return;R.amount=a.value;R.note=$('#rn').value;const d=[...document.querySelectorAll('.rd')].map(i=>parseInt(i.dataset.d)||1);R.days=d.concat(R.days.slice(d.length))}
-function setR(k,v){grabR();R[k]=v;drawRec()}
+function setR(k,v){grabR();if(k==='mode'){R.mode=v;if(String(v).toLowerCase()==='efectivo')R.bank='';else if(!R.bank)R.bank=BANKS[0]||''}else if(k==='bank'){R.bank=(R.bank===v)?'':v;if(R.bank&&R.mode&&R.mode.toLowerCase()==='efectivo')R.mode=MODES.find(m=>m.toLowerCase()!=='efectivo')||'Tarjeta'}else{R[k]=v}drawRec()}
 function setTimes(n){grabR();R.times=n;R.days=Array.from({length:n},(_,i)=>R.days[i]||[1,8,15,22][i]);drawRec()}
 function drawRec(){
  const c=T[R.type].c,ch=(k,a)=>a.map(b=>`<button class="chip ${R[k]===b?'on':''}" data-v="${esc(b)}" onclick="setR('${k}',this.dataset.v)">${esc(b)}</button>`).join('');
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet();render()"></div><div class="sh" role="dialog" aria-label="Recurrencia"><h2 style="margin:0;font-size:18px">${R.id?'Editar':'Nueva'} recurrencia · ${T[R.type].s}</h2><input id="ra" class="amtin" inputmode="decimal" placeholder="0,00 € por cargo" value="${esc(R.amount)}" style="color:${c}" onblur="resolveAmt(this)"><div class="lbl">Concepto</div><div class="chips">${CATS[R.type].map((x,i)=>`<button class="chip ${R.cat===x[0]?'on':''}" onclick="setR('cat',CATS[R.type][${i}][0])">${x[1]} ${esc(x[0])}</button>`).join('')}</div><div class="lbl">Veces al mes</div><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${R.times===n?'on':''}" onclick="setTimes(${n})">${n}</button>`).join('')}</div><div class="lbl">Día del mes de cada cargo</div><div class="f">${R.days.slice(0,R.times).map((d,i)=>dayPick(d,i)).join('')}</div><small style="color:var(--mute);font-weight:600">Elige el día en el calendario: el cargo se repite ese día de cada mes (si el mes es más corto, el último día).</small><div class="lbl">Omitir en estos meses (no se crea el cargo)</div><div class="chips">${skipMonths().map(([k,n])=>`<button class="chip ${R.skip.includes(k)?'on':''}" onclick="togSkip('${k}')">${n}</button>`).join('')}</div><div class="lbl">Banco</div><div class="chips">${ch('bank',BANKS)}</div>${R.type==='fixed'?`<div class="lbl">Modo de pago</div><div class="chips">${ch('mode',MODES)}</div>`:''}<div class="f"><input id="rn" placeholder="Nota (opcional)" maxlength="60" value="${esc(R.note)}"></div><button class="save" style="background:${c}" onclick="saveRec()">Guardar</button>${R.id?'<button class="del" onclick="delRec()">Eliminar recurrencia</button>':''}<button class="del" style="color:var(--mute)" onclick="drawRecs()">Volver</button></div>`;
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet();render()"></div><div class="sh" role="dialog" aria-label="Recurrencia"><h2 style="margin:0;font-size:18px">${R.id?'Editar':'Nueva'} recurrencia · ${T[R.type].s}</h2><input id="ra" class="amtin" inputmode="decimal" placeholder="0,00 € por cargo" value="${esc(R.amount)}" style="color:${c}" onblur="resolveAmt(this)"><div class="lbl">Concepto</div><div class="chips">${CATS[R.type].map((x,i)=>`<button class="chip ${R.cat===x[0]?'on':''}" onclick="setR('cat',CATS[R.type][${i}][0])">${x[1]} ${esc(x[0])}</button>`).join('')}</div><div class="lbl">Veces al mes</div><div class="chips">${[1,2,3,4].map(n=>`<button class="chip ${R.times===n?'on':''}" onclick="setTimes(${n})">${n}</button>`).join('')}</div><div class="lbl">Día del mes de cada cargo</div><div class="f">${R.days.slice(0,R.times).map((d,i)=>dayPick(d,i)).join('')}</div><small style="color:var(--mute);font-weight:600">Elige el día en el calendario: el cargo se repite ese día de cada mes (si el mes es más corto, el último día).</small><div class="lbl">Omitir en estos meses (no se crea el cargo)</div><div class="chips">${skipMonths().map(([k,n])=>`<button class="chip ${R.skip.includes(k)?'on':''}" onclick="togSkip('${k}')">${n}</button>`).join('')}</div>${['fixed','debt'].includes(R.type)||T[R.type].g==='exp'?`<div class="lbl">Modo de pago</div><div class="chips">${ch('mode',MODES)}</div>`:''}${(['fixed','debt'].includes(R.type)||T[R.type].g==='exp')&&R.mode&&R.mode.toLowerCase()==='efectivo'?`<div class="lbl">Banco</div><small style="display:block;color:var(--mute);font-weight:700;margin:4px 0 12px">💵 Pago en efectivo (sin banco)</small>`:`<div class="lbl">Banco</div><div class="chips">${ch('bank',BANKS)}</div>`}<div class="f"><input id="rn" placeholder="Nota (opcional)" maxlength="60" value="${esc(R.note)}"></div><button class="save" style="background:${c}" onclick="saveRec()">Guardar</button>${R.id?'<button class="del" onclick="delRec()">Eliminar recurrencia</button>':''}<button class="del" style="color:var(--mute)" onclick="drawRecs()">Volver</button></div>`;
 }
 function saveRec(){
  grabR();const a=parseFloat(String(R.amount).replace(',','.'));
@@ -362,7 +417,7 @@ function skipMonths(){const s=new Set(R.skip);for(let i=0;i<12;i++){const d=new 
 function togSkip(k){grabR();R.skip=R.skip.includes(k)?R.skip.filter(x=>x!==k):[...R.skip,k];drawRec()}
 function skipTx(){const t=S.tx.find(x=>x.id===M.id),r=(S.rec||[]).find(x=>x.id===t.rid);if(r){const k=t.date.slice(0,7);r.skip=[...new Set([...(r.skip||[]),k])];S.tx=S.tx.filter(x=>x.id!==t.id&&!(x.rid===r.id&&!x.paid&&x.date.slice(0,7)===k))}save();closeSheet();render()}
 function delRec(){S.rec=(S.rec||[]).filter(x=>x.id!==R.id);save();drawRecs()}
-function syncLists(){S.banks=S.banks||['BBVA','Trade Republic','My Investor','Efectivo'];S.modes=S.modes||['Tarjeta','Bizum','Transferencia','Transfe pl.','Efectivo'];BANKS=S.banks;MODES=S.modes}
+function syncLists(){S.banks=(S.banks||['BBVA','Trade Republic','My Investor']).filter(b=>b.toLowerCase()!=='efectivo');if(!S.banks.length)S.banks=['BBVA','Trade Republic','My Investor'];S.modes=S.modes||['Tarjeta','Bizum','Transferencia','Transfe pl.','Efectivo'];BANKS=S.banks;MODES=S.modes}
 const mcol=(m,i)=>(S.colors||{})['m:'+m]||PAL[i%PAL.length];
 const isDark=()=>S.theme?S.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
 function toggleTheme(){S.theme=isDark()?'light':'dark';save();render()}
@@ -376,10 +431,24 @@ function calc(s){
 const pv=s=>{s=String(s).trim();return s[0]==='='?calc(s.slice(1)):parseFloat(s.replace(',','.'))};
 function resolveAmt(el){const v=el.value.trim();if(v[0]==='='){const r=calc(v.slice(1));el.value=isNaN(r)?'':f2(r);if(isNaN(r))el.placeholder='Operación no válida'}if(M)M.amount=el.value}
 function calcMode(){const a=$('#amt');a.inputMode='text';if(a.value[0]!=='=')a.value='='+a.value;a.focus()}
+const dtot=n=>(S.debtTot||{})[n]||0;
+const debtPaid=n=>S.tx.filter(t=>t.type==='debt'&&t.cat===n).reduce((a,t)=>a+t.amount,0);   // todos los pagos del concepto, de cualquier mes
+function setDebtTot(n,v){const s=String(v).trim(),x=pv(s);S.debtTot=S.debtTot||{};if(s===''||isNaN(x)||x<=0)delete S.debtTot[n];else S.debtTot[n]=x;save();render()}
+function debtCard(){
+ return `<div class="card"><h2>Progreso de cada deuda</h2><small style="color:var(--mute);font-weight:600">Indica el total de cada deuda: se va llenando con los pagos que registres en ese concepto, de cualquier mes.</small>${CATS.debt.map(c=>{
+  const n=c[0],t=dtot(n),p=debtPaid(n),left=Math.max(0,t-p),pr=t>0?Math.max(0,Math.min(100,p/t*100)):0;
+  return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="f2"><span>${c[1]} ${esc(n)}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="Total deuda €" value="${f2(t||null)}" data-n="${esc(n)}" onchange="setDebtTot(this.dataset.n,this.value)" aria-label="Total de la deuda ${esc(n)}"></div>${t>0?`<div class="pbar" role="progressbar" aria-valuenow="${Math.round(pr)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pr}%;background:var(--debt)"></i></div><div class="leg" style="margin-top:4px"><span style="color:${left?'var(--mute)':'var(--inc)'};font-weight:${left?600:800}">${left?`${eur(p)} pagado de ${eur(t)} · pendiente ${eur(left)}`:'¡Deuda saldada!'}</span><span>${Math.round(pr)}%</span></div>`:`<div class="leg" style="margin-top:2px"><span>Pagado hasta ahora: ${eur(p)} · define el total para ver el progreso</span></div>`}</div>`}).join('')}</div>`;
+}
 function acc(l,ty,tot){const v=sum(l,ty);return `<details class="acc" ${(V.op||{})[ty]?'open':''} ontoggle="(V.op=V.op||{})['${ty}']=this.open"><summary><i class="dot" style="background:${T[ty].c}"></i>${T[ty].n}<b>${eur(v)} <small style="color:var(--mute)">${pc(v,tot)}</small></b></summary>${section(l,ty)}</details>`}
+function incView(l){
+ const ks=typesOf('inc');
+ if(ks.length===1)return section(l,ks[0]);
+ const tot=sumG(l,'inc');
+ return ks.map(k=>acc(l,k,tot)).join('');
+}
 function gastos(l){
- const fx=sum(l,'fixed'),sm=sum(l,'semi'),vr=sum(l,'var'),db=sum(l,'debt'),tot=fx+sm+vr+db,it=[['fixed',fx],['semi',sm],['var',vr],['debt',db]].map(([k,v])=>({k,v:Math.max(0,v),c:T[k].c}));
- return `<div class="card"><h2>Peso de cada tipo de gasto</h2>${tot>0?`<div class="donutwrap">${donut(it,tot,'gasto total')}<div class="cl">${it.map(i=>`<div><i class="dot" style="background:${i.c}"></i><span class="n">${T[i.k].n.replace('Gastos ','')}</span><em>${eur(i.v)}</em><small style="color:var(--mute);width:34px;text-align:right">${pc(i.v,tot)}</small></div>`).join('')}</div></div>`:'<div class="empty"><big>🌱</big>Aún no hay gastos este mes.</div>'}</div>${['fixed','semi','var','debt'].map(k=>acc(l,k,tot)).join('')}`;
+ const ks=typesOf('exp'),tot=sumG(l,'exp'),it=ks.map(k=>({k,v:Math.max(0,sum(l,k)),c:T[k].c}));
+ return `<div class="card"><h2>Peso de cada tipo de gasto</h2>${tot>0?`<div class="donutwrap">${donut(it,tot,'gasto total')}<div class="cl">${it.map(i=>`<div><i class="dot" style="background:${i.c}"></i><span class="n">${esc(T[i.k].n.replace(/^Gastos\s+/i,''))}</span><em>${eur(i.v)}</em><small style="color:var(--mute);width:34px;text-align:right">${pc(i.v,tot)}</small></div>`).join('')}</div></div>`:'<div class="empty"><big>🌱</big>Aún no hay gastos este mes.</div>'}</div>${ks.map(k=>acc(l,k,tot)).join('')}`;
 }
 const recPlan=(k,m)=>{let f=false,t=0;(S.rec||[]).forEach(r=>{if(r.type+':'+r.cat===k){f=true;if(!(r.skip||[]).includes(m))t+=r.amount*r.times}});return f?Math.round(t*100)/100:undefined};
 // previsto de un concepto: ajuste de este mes > importe fijado > importe de su recurrencia
@@ -402,21 +471,23 @@ function budRow(l,ty,c){
 }
 const planSum=t=>t==='saving'?(planOf('saving:Ahorro')||0):(CATS[t]||[]).reduce((a,c)=>a+(planOf(t+':'+c[0])||0),0);
 function planTop(l){   // indicador: ingresos previstos menos todo lo asignado
- const inc=incPlan(),asg=planSum('fixed')+planSum('semi')+planSum('var')+planSum('invest')+planSum('saving')+planSum('debt'),left=Math.round((inc-asg)*100)/100;
+ const inc=incPlan(),asg=outTypes().reduce((a,k)=>a+planSum(k),0)+planSum('saving'),left=Math.round((inc-asg)*100)/100;
  const col=inc<=0?'--mute':left<0?'--exp':left===0?'--inc':'--sav',st=inc<=0?'a\u00f1ade tus ingresos previstos':left>0?'sin destino':left===0?'\u00a1todo asignado!':'asignado de m\u00e1s',pr=inc>0?Math.max(0,Math.min(100,asg/inc*100)):0;
  return `<div class="card" style="position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:4;margin-top:0;border:2px solid var(${col})"><div class="f2"><span style="font-weight:800">Por asignar</span><span style="text-align:right"><b style="font-size:26px;letter-spacing:-.5px;color:var(${col==='--mute'?'--ink':col})">${eur(left)}</b> <small style="color:var(--mute);font-weight:700">${st}</small></span></div><div class="pbar" role="progressbar" aria-valuenow="${Math.round(pr)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pr}%;background:var(${col==='--mute'?'--line':col})"></i></div><div class="leg"><span>Ingresos ${eur(inc)}</span><span>\u2212 Asignado ${eur(asg)}</span></div></div>`;
 }
 function budView(l){
- const blk=(id,title,color,plan,real,rows)=>`<details class="acc" ${(V.op||{})['pb'+id]?'open':''} ontoggle="(V.op=V.op||{})['pb${id}']=this.open"><summary><i class="dot" style="background:var(${color})"></i>${title}<b>${eur(plan)} <small style="color:var(--mute)">real ${eur(real)}</small></b></summary><div class="card">${rows}</div></details>`,
-  rows=t=>CATS[t].map(c=>budRow(l,t,c)).join('');
- return planTop(l)+`<div class="card"><h2>Ingresos previstos</h2>${budRow(l,'income',['Ingresos','\ud83d\udcb5'])}<label class="f2" style="margin-top:8px"><span>Editar solo ${MN[V.m].toLowerCase()}</span><input type="checkbox" ${V.planMonth?'checked':''} onchange="V.planMonth=this.checked;render()" style="width:22px;height:22px"></label><small style="color:var(--mute);font-weight:600">Sin marcar, los importes valen para todos los meses; marcado, solo para este (p. ej. una paga extra). Los conceptos con recurrencia se rellenan solos.</small></div>`
-  +blk('fixed','Gastos fijos','--exp',planSum('fixed'),sum(l,'fixed'),rows('fixed'))
-  +blk('semi','Gastos semifijos','--semi',planSum('semi'),sum(l,'semi'),rows('semi'))
-  +blk('var','Gastos variables','--vr',planSum('var'),sum(l,'var'),rows('var'))
-  +blk('debt','Deudas','--debt',planSum('debt'),sum(l,'debt'),rows('debt'))
-  +blk('inv','Inversiones y ahorro','--inv',planSum('invest')+planSum('saving'),sum(l,'invest')+ah(l),rows('invest')+budRow(l,'saving',['Ahorro','\ud83d\udc37']));
+ const blk=(id,title,color,plan,real,rows)=>`<details class="acc" ${(V.op||{})['pb'+id]?'open':''} ontoggle="(V.op=V.op||{})['pb${id}']=this.open"><summary><i class="dot" style="background:var(${color})"></i>${esc(title)}<b>${eur(plan)} <small style="color:var(--mute)">real ${eur(real)}</small></b></summary><div class="card">${rows}</div></details>`,
+  rows=t=>(CATS[t]||[]).map(c=>budRow(l,t,c)).join('')+`<button class="cp" style="margin-top:10px" onclick="openConFor('${t}')">＋ Gestionar conceptos de ${esc(T[t].n.toLowerCase())}</button>`;
+ const expBlks=typesOf('exp').map(k=>blk(k,T[k].n,T[k].v,planSum(k),sum(l,k),rows(k))).join('');
+ const invKs=[...typesOf('inv'),...typesOf('sav')];
+ const invPlan=invKs.reduce((a,k)=>a+planSum(k),0)+planSum('saving');
+ const invReal=invKs.reduce((a,k)=>a+sum(l,k),0)+ah(l);
+ const invRows=invKs.map(k=>rows(k)).join('')+budRow(l,'saving',[SAV_META.n,'🐷']);
+ return planTop(l)+`<div class="card"><h2>Ingresos previstos</h2>${budRow(l,'income',[T.income.n,'💵'])}<label class="f2" style="margin-top:8px"><span>Editar solo ${MN[V.m].toLowerCase()}</span><input type="checkbox" ${V.planMonth?'checked':''} onchange="V.planMonth=this.checked;render()" style="width:22px;height:22px"></label><small style="color:var(--mute);font-weight:600">Sin marcar, los importes valen para todos los meses; marcado, solo para este (p. ej. una paga extra). Los conceptos con recurrencia se rellenan solos.</small></div>`
+  +expBlks
+  +blk('inv','Inversiones y '+SAV_META.n.toLowerCase(),'--inv',invPlan,invReal,invRows);
 }
-const ah=x=>sum(x,'income')-sum(x,'fixed')-sum(x,'semi')-sum(x,'var')-sum(x,'debt')-sum(x,'invest');
+const ah=x=>sumG(x,'inc')-sumG(x,'exp')-sumG(x,'inv')-sumG(x,'sav');
 const goalOf=k=>(S.goalMo&&S.goalMo[k]>0)?S.goalMo[k]:(S.goalY>0?S.goalY/12:0);
 function setGoal(t,v){const x=parseFloat(String(v).replace(',','.'));if(t==='Y')S.goalY=x>0?x:0;else{S.goalMo=S.goalMo||{};if(x>0)S.goalMo[key()]=x;else delete S.goalMo[key()]}save();render()}
 function closeNote(){
@@ -444,7 +515,7 @@ function ahorroView(l){
  const s=ah(l),gy=S.goalY||0,gm=goalOf(key());let ys=0;
  for(let m=0;m<12;m++){const x=S.tx.filter(t=>t.date.slice(0,7)===V.y+'-'+String(m+1).padStart(2,'0'));if(x.length)ys+=ah(x)}
  const bar=(v,g,c)=>`<div class="pbar" role="progressbar" aria-valuenow="${g>0?Math.round(v/g*100):0}" aria-valuemin="0" aria-valuemax="100"><i style="width:${g>0?Math.max(0,Math.min(100,v/g*100)):0}%;background:var(${c})"></i></div>`;
- return `${closeNote()}<details class="acc" ${(V.op||{}).ahorro?'open':''} ontoggle="(V.op=V.op||{}).ahorro=this.open"><summary><i class="dot" style="background:var(--sav)"></i>Ahorro<b>${eur(s)}</b></summary><div class="card"><h2>Objetivos de ahorro</h2><div class="f2"><span>Objetivo anual ${V.y}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="0 €" value="${f2(S.goalY||null)}" onchange="setGoal('Y',this.value)" aria-label="Objetivo de ahorro anual"></div>${bar(ys,gy,'--inc')}<div class="leg"><span>${gy?`${eur(ys)} de ${eur(gy)} · ${pc(ys,gy)}`:'Define tu objetivo anual'}</span></div><div class="f2" style="margin-top:14px"><span>Objetivo de ${MN[V.m].toLowerCase()}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="${gy?f2(Math.round(gy/12*100)/100):'0 €'}" value="${f2((S.goalMo||{})[key()])}" onchange="setGoal('M',this.value)" aria-label="Objetivo de ahorro mensual"></div>${bar(s,gm,'--sav')}<div class="leg"><span>${gm?`${eur(s)} de ${eur(gm)} este mes`:'Vacío = objetivo anual ÷ 12. Ajústalo en meses de paga extra.'}</span></div></div>${potsCard()}</details><details class="acc" ${(V.op||{}).inversiones?'open':''} ontoggle="(V.op=V.op||{}).inversiones=this.open"><summary><i class="dot" style="background:var(--inv)"></i>Inversiones<b>${eur(sum(l,'invest'))}</b></summary>${section(l,'invest')}</details>`;
+ return `${closeNote()}<details class="acc" ${(V.op||{}).ahorro?'open':''} ontoggle="(V.op=V.op||{}).ahorro=this.open"><summary><i class="dot" style="background:var(--sav)"></i>Ahorro<b>${eur(s)}</b></summary><div class="card"><h2>Objetivos de ahorro</h2><div class="f2"><span>Objetivo anual ${V.y}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="0 €" value="${f2(S.goalY||null)}" onchange="setGoal('Y',this.value)" aria-label="Objetivo de ahorro anual"></div>${bar(ys,gy,'--inc')}<div class="leg"><span>${gy?`${eur(ys)} de ${eur(gy)} · ${pc(ys,gy)}`:'Define tu objetivo anual'}</span></div><div class="f2" style="margin-top:14px"><span>Objetivo de ${MN[V.m].toLowerCase()}</span><input class="bi" style="width:110px" inputmode="decimal" placeholder="${gy?f2(Math.round(gy/12*100)/100):'0 €'}" value="${f2((S.goalMo||{})[key()])}" onchange="setGoal('M',this.value)" aria-label="Objetivo de ahorro mensual"></div>${bar(s,gm,'--sav')}<div class="leg"><span>${gm?`${eur(s)} de ${eur(gm)} este mes`:'Vacío = objetivo anual ÷ 12. Ajústalo en meses de paga extra.'}</span></div></div>${potsCard()}</details>${[...typesOf('sav'),...typesOf('inv')].map(k=>`<details class="acc" ${(V.op||{})['ah_'+k]?'open':''} ontoggle="(V.op=V.op||{})['ah_${k}']=this.open"><summary><i class="dot" style="background:${T[k].c}"></i>${esc(T[k].n)}<b>${eur(sum(l,k))}</b></summary>${section(l,k)}</details>`).join('')}`;
 }
 const RL={fixed:'Gasto fijo',semi:'Gasto semifijo',var:'Gasto variable',invest:'Inversión'};
 function openSettings(){SM=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['con','🏷️','Conceptos'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad (JSON)']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
@@ -506,7 +577,7 @@ function expBody(){
  return `<div class="lbl">Exportar tus datos</div><small style="color:var(--mute);font-weight:600">Copia este texto o descarga el archivo .json para guardar un respaldo.</small><textarea id="ej" readonly rows="5" style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" onfocus="this.select()">${esc(JSON.stringify(S))}</textarea><div class="f2" style="gap:8px"><button class="cp" onclick="const e=$('#ej');e.select();document.execCommand('copy');this.textContent='✓ Copiado'">📋 Copiar texto</button><button class="cp" onclick="dlJson()">⬇ Descargar .json</button></div><hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><div class="lbl">Importar / Restaurar copia</div><textarea id="ij" rows="4" placeholder="Pega aquí tu copia JSON..." style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" oninput="ICACHE=this.value;IARM=false">${esc(ICACHE)}</textarea><label class="cp" style="display:block;text-align:center;margin-bottom:8px;cursor:pointer">📂 Subir archivo .json<input type="file" accept=".json,application/json" style="display:none" onchange="loadFile(this)"></label>${IMSG?`<div class="note" style="background:var(--bg);margin:8px 0;font-size:13px">${esc(IMSG)}</div>`:''}<button class="save" style="background:${IARM?'var(--exp)':'var(--brand)'}" onclick="importData()">${IARM?'¿Seguro? Pulsa para sobrescribir':'Restaurar copia de seguridad'}</button>`;
 }
 let CMSG='',CARM=null;
-const CON_T=[['income','Ingresos'],['fixed','Gastos fijos'],['semi','Gastos semifijos'],['var','Gastos variables'],['debt','Deudas'],['invest','Inversiones']];
+const getConT=()=>(CON_ONLY?[CON_ONLY]:allTypes()).map(k=>[k,T[k].n]);
 const ckey=(t,n)=>'c:'+t+':'+n;
 function renameKey(o,a,b){if(o&&a in o){o[b]=o[a];delete o[a]}}
 function conUse(t,n){return{tx:S.tx.filter(x=>x.type===t&&x.cat===n).length,rec:(S.rec||[]).filter(r=>r.type===t&&r.cat===n).length}}
@@ -518,7 +589,7 @@ function editCon(t,i,f,v){   // f: 'e' icono, 'n' nombre (el cambio de nombre se
  c[0]=v;
  S.tx.forEach(x=>{if(x.type===t&&x.cat===old)x.cat=v});(S.rec||[]).forEach(r=>{if(r.type===t&&r.cat===old)r.cat=v});
  renameKey(S.bud,t+':'+old,t+':'+v);Object.values(S.budMo||{}).forEach(o=>renameKey(o,t+':'+old,t+':'+v));
- renameKey(S.colors,ckey(t,old),ckey(t,v));if(t==='invest')renameKey(S.invBase,old,v);
+ renameKey(S.colors,ckey(t,old),ckey(t,v));if(t==='invest')renameKey(S.invBase,old,v);if(t==='debt')renameKey(S.debtTot,old,v);
  CMSG=`«${old}» ahora es «${v}»: se han actualizado sus movimientos, recurrencias y previsión.`;save();render();
 }
 function addCon(t){
@@ -534,12 +605,12 @@ function delCon(t,i){   // dos pulsaciones: la primera avisa de lo que se perder
  CARM=null;CMSG=`«${c[0]}» eliminado.`;CATS[t].splice(i,1);
  S.rec=(S.rec||[]).filter(r=>!(r.type===t&&r.cat===c[0]));
  if(S.bud)delete S.bud[t+':'+c[0]];Object.values(S.budMo||{}).forEach(o=>delete o[t+':'+c[0]]);
- if(S.colors)delete S.colors[ckey(t,c[0])];if(t==='invest'&&S.invBase)delete S.invBase[c[0]];
+ if(S.colors)delete S.colors[ckey(t,c[0])];if(t==='invest'&&S.invBase)delete S.invBase[c[0]];if(t==='debt'&&S.debtTot)delete S.debtTot[c[0]];
  save();render();
 }
 function conBody(){
  const C=S.colors||{};
- return `<small style="color:var(--mute);font-weight:600">Crea, renombra o elimina los conceptos de cada bloque. Al renombrar se actualizan tus movimientos, recurrencias y previsión.</small>${CMSG?`<div class="note" style="background:var(--bg);margin:10px 0" role="status">${esc(CMSG)}</div>`:''}${CON_T.map(([t,title])=>`<details class="acc" ${(V.op||{})['con_'+t]?'open':''} ontoggle="(V.op=V.op||{})['con_${t}']=this.open"><summary style="background:var(--bg);box-shadow:none;padding:12px 14px">${title}<b style="color:var(--mute);font-weight:700">${CATS[t].length}</b></summary><div style="padding:6px 2px">${CATS[t].map((c,i)=>`<div class="f2"><input type="color" class="cin" data-k="${esc(ckey(t,c[0]))}" value="${C[ckey(t,c[0])]||PAL[i%PAL.length]}" onchange="setCol(this.dataset.k,this.value)" aria-label="Color de ${esc(c[0])}"><input class="bi" style="width:56px;text-align:center" maxlength="8" value="${esc(c[1])}" onchange="editCon('${t}',${i},'e',this.value)" aria-label="Icono de ${esc(c[0])}"><input class="bi" style="text-align:left;flex:1" value="${esc(c[0])}" maxlength="30" onchange="editCon('${t}',${i},'n',this.value)" aria-label="Nombre del concepto"><button class="chip ${CARM===t+':'+i?'on':''}" aria-label="Eliminar ${esc(c[0])}" onclick="delCon('${t}',${i})">${CARM===t+':'+i?'¿Seguro?':'✕'}</button></div>`).join('')}<div class="f2" style="margin-top:6px"><input class="bi" id="ce-${t}" style="width:56px;text-align:center" maxlength="8" placeholder="🙂" aria-label="Icono del nuevo concepto"><input class="bi" id="cn-${t}" style="text-align:left;flex:1" maxlength="30" placeholder="Nuevo concepto" aria-label="Nombre del nuevo concepto"><button class="chip on" onclick="addCon('${t}')">＋ Añadir</button></div></div></details>`).join('')}`;
+ return `<small style="color:var(--mute);font-weight:600">Crea, renombra o elimina los conceptos de cada bloque. Al renombrar se actualizan tus movimientos, recurrencias y previsión.</small>${CMSG?`<div class="note" style="background:var(--bg);margin:10px 0" role="status">${esc(CMSG)}</div>`:''}${getConT().map(([t,title])=>`<details class="acc" ${(V.op||{})['con_'+t]?'open':''} ontoggle="(V.op=V.op||{})['con_${t}']=this.open"><summary style="background:var(--bg);box-shadow:none;padding:12px 14px">${title}<b style="color:var(--mute);font-weight:700">${CATS[t].length}</b></summary><div style="padding:6px 2px">${CATS[t].map((c,i)=>`<div class="f2"><input type="color" class="cin" data-k="${esc(ckey(t,c[0]))}" value="${C[ckey(t,c[0])]||PAL[i%PAL.length]}" onchange="setCol(this.dataset.k,this.value)" aria-label="Color de ${esc(c[0])}"><input class="bi" style="width:56px;text-align:center" maxlength="8" value="${esc(c[1])}" onchange="editCon('${t}',${i},'e',this.value)" aria-label="Icono de ${esc(c[0])}"><input class="bi" style="text-align:left;flex:1" value="${esc(c[0])}" maxlength="30" onchange="editCon('${t}',${i},'n',this.value)" aria-label="Nombre del concepto"><button class="chip ${CARM===t+':'+i?'on':''}" aria-label="Eliminar ${esc(c[0])}" onclick="delCon('${t}',${i})">${CARM===t+':'+i?'¿Seguro?':'✕'}</button></div>`).join('')}<div class="f2" style="margin-top:6px"><input class="bi" id="ce-${t}" style="width:56px;text-align:center" maxlength="8" placeholder="🙂" aria-label="Icono del nuevo concepto"><input class="bi" id="cn-${t}" style="text-align:left;flex:1" maxlength="30" placeholder="Nuevo concepto" aria-label="Nombre del nuevo concepto"><button class="chip on" onclick="addCon('${t}')">＋ Añadir</button></div></div></details>`).join('')}`;
 }
 function addItem(k){const el=$('#new-'+k),n=el.value.trim(),a=S[k];if(!n||a.some(x=>x.toLowerCase()===n.toLowerCase()))return;a.push(n);save();render()}
 function renameItem(k,i,v){const a=S[k],o=a[i],n=v.trim(),f=k==='banks'?'bank':'mode',p=k==='banks'?'b':'m';if(!n||(n!==o&&a.some(x=>x.toLowerCase()===n.toLowerCase()))){render();return}a[i]=n;S.tx.forEach(t=>{if(t[f]===o)t[f]=n;if(f==='bank'&&t.bank2===o)t.bank2=n});(S.rec||[]).forEach(r=>{if(r[f]===o)r[f]=n});const c=S.colors=S.colors||{};if(c[p+':'+o]){c[p+':'+n]=c[p+':'+o];delete c[p+':'+o]}save();render()}
@@ -549,7 +620,7 @@ function setBody(k){
  const add=(k,t)=>`<div class="f2" style="margin-top:8px"><input class="bi" style="text-align:left;flex:1" id="new-${k}" placeholder="${t}" maxlength="24"><button class="chip on" onclick="addItem('${k}')">＋ Añadir</button></div>`;
  return k==='banks'?list('banks',BANKS,'b')+add('banks','Nuevo banco'):k==='modes'?list('modes',MODES,'m')+add('modes','Nuevo método de pago'):`<button class="cp" style="margin-top:10px" onclick="openColors()">🎨 Colores de bloques y conceptos</button>`;
 }
-function setM(k,v){grab();M[k]=v;drawSheet()}
+function setM(k,v){grab();if(k==='mode'){M.mode=v;if(String(v).toLowerCase()==='efectivo')M.bank='';else if(!M.bank)M.bank=BANKS[0]||''}else if(k==='bank'){M.bank=(M.bank===v)?'':v;if(M.bank&&M.mode&&M.mode.toLowerCase()==='efectivo')M.mode=MODES.find(m=>m.toLowerCase()!=='efectivo')||'Tarjeta'}else{M[k]=v}drawSheet()}
 function togglePaid(id){const t=S.tx.find(x=>x.id===id);t.paid=!t.paid;save();render()}
 function rmCat(i){CATS[M.type].splice(i,1);if(!CATS[M.type].length)CATS[M.type].push(['Otros','🏷️']);save();drawSheet()}
 function closeSheet(){$('#sheet').innerHTML='';M=null;SM=null}
@@ -559,7 +630,7 @@ function saveTx(){
  const a=parseFloat(String(M.amount).replace(',','.'));
  const amount=pv(M.amount);
  if(!(amount>0)){$('#amt').focus();$('#amt').placeholder='Escribe un importe';return}
- const o={type:M.type,cat:M.cat||CATS[M.type][0][0],amount:Math.round(amount*100)/100*(M.refund?-1:1),bank:M.bank,mode:['fixed','semi','var','debt'].includes(M.type)?M.mode:'',paid:M.type==='fixed'&&M.paid,date:M.date||defDate(),note:M.note.trim()};
+ const isExp=T[M.type].g==='exp',md=isExp?M.mode:'',bk=(isExp&&md.toLowerCase()==='efectivo')?'':M.bank;const o={type:M.type,cat:M.cat||CATS[M.type][0][0],amount:Math.round(amount*100)/100*(M.refund?-1:1),bank:bk,mode:md,paid:['fixed','debt'].includes(M.type)&&M.paid,date:M.date||defDate(),note:M.note.trim()};
  if(M.id){Object.assign(S.tx.find(x=>x.id===M.id),o)}else{S.tx.push({id:Date.now(),...o})}
  const d=new Date(o.date+'T12:00');V.y=d.getFullYear();V.m=d.getMonth();
  save();closeSheet();render();
