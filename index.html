@@ -132,7 +132,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-
 
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
-<link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Mi mes · Finanzas&quot;,&quot;short_name&quot;:&quot;Mi mes&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;background_color&quot;:&quot;#17142A&quot;,&quot;theme_color&quot;:&quot;#1F5F6B&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;logo.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}"></head>
+<link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Mi mes · Finanzas&quot;,&quot;short_name&quot;:&quot;Mi mes&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;background_color&quot;:&quot;#17142A&quot;,&quot;theme_color&quot;:&quot;#1F5F6B&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;logo.png&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script></head>
 <body>
 <div id="app"></div>
 <div id="sheet"></div>
@@ -190,7 +193,7 @@ function fixup(){
 try{const r=localStorage.getItem('mimes_v1');if(r){S=JSON.parse(r);if(S.cats)CATS=S.cats}}catch(e){}
 S=Object.assign({tx:[],rec:[],pots:[]},S);
 fixup();
-function save(){S.cats=CATS;try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}}
+function save(){S.cats=CATS;S.updatedAt=Date.now();try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}if(typeof scheduleFbPush==='function')scheduleFbPush()}catch(e){}}
 const key=()=>V.y+'-'+String(V.m+1).padStart(2,'0');
 const mtx=()=>S.tx.filter(t=>t.date.slice(0,7)===key()).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
 const sum=(l,ty)=>l.filter(t=>t.type===ty).reduce((a,t)=>a+t.amount,0);
@@ -245,7 +248,7 @@ function prevKey(){const d=new Date(V.y,V.m-1,1);return d.getFullYear()+'-'+Stri
 function pending(ty){const cur=S.tx.filter(t=>t.date.slice(0,7)===key()&&t.type===ty);return S.tx.filter(t=>t.date.slice(0,7)===prevKey()&&t.type===ty&&!cur.some(c=>c.cat===t.cat&&c.note===t.note))}
 function copyBtn(ty){if(!['fixed','debt','invest','income'].includes(ty)&&T[ty].g==='exp')return'';const n=pending(ty).length;return n?`<button class="cp" onclick="copyPrev('${ty}')">↻ Traer ${n} ${n>1?'movimientos':'movimiento'} del mes anterior</button>`:''}
 function copyPrev(ty){const last=new Date(V.y,V.m+1,0).getDate();pending(ty).forEach((t,i)=>{const d=Math.min(+t.date.slice(8),last);S.tx.push({...t,paid:false,id:Date.now()+i,date:key()+'-'+String(d).padStart(2,'0')})});save();render()}
-function render(){applyColors();autoApply();if(['banks','modes','look','con','cats','exp'].includes(SM))drawSet();if(V.mode==='year')return renderYear();
+function render(){applyColors();autoApply();if(['cloud','banks','modes','look','con','cats','exp'].includes(SM))drawSet();if(V.mode==='year')return renderYear();
  const l=mtx(),mn=MN[V.m]+' '+V.y;
  $('#app').innerHTML=`<header><button class="arr" aria-label="Mes anterior" onclick="move(-1)">‹</button><h1>${mn}</h1><button class="arr" aria-label="Mes siguiente" onclick="move(1)">›</button></header>${modeSeg()}
  ${V.tab==='resumen'?resumen(l):V.tab==='income'?incView(l):V.tab==='gastos'?gastos(l):V.tab==='bud'?budView(l):V.tab==='ahorro'?ahorroView(l):resumen(l)}
@@ -339,7 +342,7 @@ function monthChart(it,inc){
  else g=`<div class="bar">${it.map(x=>`<i ${at(x)} style="width:${Math.max(0,x[0])/tot*100}%;background:var(${x[1]})"></i>`).join('')}</div>`;
  return `${sel}<div class="chart">${g}</div><div id="segtip" class="segtip">Toca o pasa el cursor por un color para ver qué % de tus ingresos representa.</div>`;
 }
-function modeSeg(){const m=V.mode||'month';return `<div style="display:flex;gap:8px;align-items:center;margin:2px 0 6px"><div class="seg" style="flex:1">${[['month','Mes'],['year','Año']].map(([k,n])=>`<button class="${m===k?'on':''}" ${m===k?'style="background:var(--brand)"':''} onclick="V.mode='${k}';render();scrollTo(0,0)">${n}</button>`).join('')}</div><button class="arr" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro u oscuro" onclick="toggleTheme()">${isDark()?'☀️':'🌙'}</button><button class="arr" aria-label="Ajustes" onclick="openSettings()">⚙️</button></div>`}
+function modeSeg(){const m=V.mode||'month';return `<div style="display:flex;gap:8px;align-items:center;margin:2px 0 6px"><div class="seg" style="flex:1">${[['month','Mes'],['year','Año']].map(([k,n])=>`<button class="${m===k?'on':''}" ${m===k?'style="background:var(--brand)"':''} onclick="V.mode='${k}';render();scrollTo(0,0)">${n}</button>`).join('')}</div><button class="arr" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro u oscuro" onclick="toggleTheme()">${isDark()?'☀️':'🌙'}</button><button class="arr" aria-label="Cuenta y Nube" title="Cuenta y sincronización en la nube" onclick="openSet('cloud')" id="cloud-btn">${typeof cloudIcon==='function'?cloudIcon():'☁️'}</button><button class="arr" aria-label="Ajustes" onclick="openSettings()">⚙️</button></div>`}
 function axis(W,H,pl,iw){return 'EFMAMJJASOND'.split('').map((t,k)=>`<text x="${pl+iw*(k+.5)/12}" y="${H-4}" style="fill:var(--mute);font-size:10px;font-weight:700;text-anchor:middle">${t}</text>`).join('')}
 const yf=v=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0,useGrouping:'always'}).format(v)+' €';
 function yscale(vals){
@@ -542,11 +545,11 @@ function ahorroView(l){
 }
 const RL={fixed:'Gasto fijo',semi:'Gasto semifijo',var:'Gasto variable',invest:'Inversión'};
 let CON_ONLY=null,CAT_MSG='',CAT_G='exp';
-function openSettings(){SM=null;CON_ONLY=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['cats','🗂️','Categorías'],['con','🏷️','Conceptos'],['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad (JSON)']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
+function openSettings(){SM=null;CON_ONLY=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['cloud','👤','Cuenta y Nube (Sincronización)'],['cats','🗂️','Categorías'],['con','🏷️','Conceptos'],['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad (JSON)']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
 function openSet(k){RMSG='';SM=k;CMSG='';CARM=null;CON_ONLY=null;CAT_MSG='';drawSet()}
 function drawSet(){
- const t={cats:'Categorías',banks:'Bancos',modes:'Modos de pago',look:'Apariencia',recs:'Recurrencias globales',exp:'Copia de seguridad (JSON)',con:CON_ONLY?'Conceptos · '+T[CON_ONLY].n:'Gestión de conceptos'}[SM];
- $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${t}"><h2 style="margin:0 0 10px;font-size:18px">${t}</h2>${SM==='recs'?globalRecs():SM==='exp'?expBody():SM==='con'?conBody():SM==='cats'?catsBody():setBody(SM)}<button class="del" style="color:var(--mute)" onclick="${CON_ONLY?'closeSheet()':'openSettings()'}">${CON_ONLY?'Cerrar':'‹ Volver a ajustes'}</button></div>`;
+ const t={cloud:'Cuenta y Nube',cats:'Categorías',banks:'Bancos',modes:'Modos de pago',look:'Apariencia',recs:'Recurrencias globales',exp:'Copia de seguridad (JSON)',con:CON_ONLY?'Conceptos · '+T[CON_ONLY].n:'Gestión de conceptos'}[SM];
+ $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${t}"><h2 style="margin:0 0 10px;font-size:18px">${t}</h2>${SM==='recs'?globalRecs():SM==='cloud'?cloudBody():SM==='exp'?expBody():SM==='con'?conBody():SM==='cats'?catsBody():setBody(SM)}<button class="del" style="color:var(--mute)" onclick="${CON_ONLY?'closeSheet()':'openSettings()'}">${CON_ONLY?'Cerrar':'‹ Volver a ajustes'}</button></div>`;
 }
 function editCatMeta(k,field,val){
  CAT_MSG='';val=String(val).trim();
@@ -782,6 +785,181 @@ function toggleKb(id,btn){
   try{const l=el.value.length;el.setSelectionRange(l,l)}catch(e){}
  },40);
 }
+
+// ---------- Sincronización en la Nube con Google Firebase (Auth + Firestore) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyDte8p560PurjnQsGmYnGu6kAYZznDfkjM",
+  authDomain: "control-de-gastos-2da4b.firebaseapp.com",
+  projectId: "control-de-gastos-2da4b",
+  storageBucket: "control-de-gastos-2da4b.firebasestorage.app",
+  messagingSenderId: "478389509971",
+  appId: "1:478389509971:web:c029131eb6d8096ecb4ba6"
+};
+
+let FB_USER=null,FB_DB=null,FB_AUTH=null,FB_UNSUB=null,FB_ST='off',FB_MSG='',FB_MODE='login',FB_TMR=null,FB_IGNORE=false;
+
+function cloudIcon(){
+ if(!FB_USER)return '☁️';
+ if(FB_ST==='sync')return '🔄';
+ if(FB_ST==='err')return '⚠️';
+ return '🟢';
+}
+function updCloudBtn(){const b=document.getElementById('cloud-btn');if(b)b.innerHTML=cloudIcon()}
+
+function initFirebaseApp(){
+ try{
+  if(typeof firebase==='undefined')return setTimeout(initFirebaseApp,250);
+  if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+  FB_AUTH=firebase.auth();
+  FB_DB=firebase.firestore();
+  FB_AUTH.onAuthStateChanged(user=>{
+   FB_USER=user;
+   if(FB_UNSUB){FB_UNSUB();FB_UNSUB=null}
+   if(user){
+    FB_ST='sync';updCloudBtn();
+    const docRef=FB_DB.collection('users').doc(user.uid);
+    FB_UNSUB=docRef.onSnapshot(snap=>{
+     if(FB_IGNORE)return;
+     if(snap.exists){
+      const d=snap.data();
+      if(d&&d.payload){
+       try{
+        const remoteS=JSON.parse(d.payload);
+        const rTime=remoteS.updatedAt||0,lTime=S.updatedAt||0;
+        if(rTime>=lTime||!S.tx.length){
+         S=Object.assign({tx:[],rec:[],pots:[]},remoteS);
+         CATS=S.cats?JSON.parse(JSON.stringify(S.cats)):JSON.parse(JSON.stringify(DEF));
+         fixup();
+         try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}
+         render();
+        }else if(lTime>rTime){
+         pushToFirebase(false);
+        }
+       }catch(e){}
+      }
+      FB_ST='ok';updCloudBtn();
+      if(SM==='cloud')drawSet();
+     }else{
+      // Cuenta recién creada: subimos los datos actuales del dispositivo a su nube privada
+      pushToFirebase(false);
+     }
+    },err=>{
+     FB_ST='err';updCloudBtn();
+    });
+   }else{
+    FB_ST='off';updCloudBtn();
+    if(SM==='cloud')drawSet();
+   }
+  });
+ }catch(e){}
+}
+
+function scheduleFbPush(){
+ if(!FB_USER||!FB_DB)return;
+ FB_ST='sync';updCloudBtn();
+ clearTimeout(FB_TMR);
+ FB_TMR=setTimeout(()=>pushToFirebase(false),900);
+}
+
+async function pushToFirebase(manual){
+ if(!FB_USER||!FB_DB)return;
+ FB_ST='sync';updCloudBtn();
+ try{
+  S.cats=CATS;if(!S.updatedAt)S.updatedAt=Date.now();
+  FB_IGNORE=true;
+  await FB_DB.collection('users').doc(FB_USER.uid).set({
+   payload:JSON.stringify(S),
+   updatedAt:S.updatedAt,
+   email:FB_USER.email||''
+  });
+  setTimeout(()=>{FB_IGNORE=false},300);
+  FB_ST='ok';updCloudBtn();
+  if(manual){FB_MSG='✓ Todos tus datos están sincronizados en la nube.';if(SM==='cloud')drawSet()}
+ }catch(e){
+  FB_IGNORE=false;FB_ST='err';updCloudBtn();
+  if(manual){FB_MSG='❌ No se pudo guardar en la nube: '+e.message;if(SM==='cloud')drawSet()}
+ }
+}
+
+function fbErrText(err){
+ const c=err&&err.code||'';
+ if(c.includes('invalid-email'))return 'El formato del correo electrónico no es válido.';
+ if(c.includes('user-not-found')||c.includes('invalid-credential')||c.includes('wrong-password'))return 'Correo o contraseña incorrectos.';
+ if(c.includes('email-already-in-use'))return 'Este correo ya está registrado. Elige «Iniciar sesión».';
+ if(c.includes('weak-password'))return 'La contraseña debe tener al menos 6 caracteres.';
+ if(c.includes('too-many-requests'))return 'Demasiados intentos. Espera unos segundos e inténtalo de nuevo.';
+ return 'Error de conexión ('+(err&&err.message||'inténtalo de nuevo')+').';
+}
+
+async function submitFbAuth(){
+ const em=($('#fb-em')||{}).value?.trim()||'';
+ const pw=($('#fb-pw')||{}).value||'';
+ if(!em||!pw){FB_MSG='⚠️ Escribe tu correo electrónico y contraseña.';drawSet();return}
+ FB_MSG='⏳ Conectando de forma segura...';drawSet();
+ try{
+  if(FB_MODE==='reg'){
+   await FB_AUTH.createUserWithEmailAndPassword(em,pw);
+   FB_MSG='✓ Cuenta creada y sincronizada con éxito.';
+  }else{
+   await FB_AUTH.signInWithEmailAndPassword(em,pw);
+   FB_MSG='✓ Sesión iniciada correctamente.';
+  }
+  drawSet();
+ }catch(err){
+  FB_MSG='⚠️ '+fbErrText(err);
+  drawSet();
+ }
+}
+
+async function resetFbPwd(){
+ const em=($('#fb-em')||{}).value?.trim()||'';
+ if(!em){FB_MSG='⚠️ Escribe primero tu correo en la casilla de arriba para enviarte el enlace.';drawSet();return}
+ try{
+  await FB_AUTH.sendPasswordResetEmail(em);
+  FB_MSG='📩 Te hemos enviado un correo para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.';
+ }catch(err){
+  FB_MSG='⚠️ '+fbErrText(err);
+ }
+ drawSet();
+}
+
+async function signOutFb(clearLocal){
+ if(FB_UNSUB){FB_UNSUB();FB_UNSUB=null}
+ await FB_AUTH.signOut();
+ if(clearLocal){
+  localStorage.removeItem('mimes_v1');
+  S=fresh();CATS=JSON.parse(JSON.stringify(DEF));fixup();
+ }
+ FB_MSG='Sesión cerrada correctamente.';
+ render();drawSet();
+}
+
+function cloudBody(){
+ if(FB_USER){
+  return `<div class="card" style="background:var(--bg);margin-bottom:10px">
+   <div class="f2"><div><small style="color:var(--mute);font-weight:700">SESIÓN INICIADA COMO</small><br><b style="font-size:15px">🟢 ${esc(FB_USER.email)}</b></div></div>
+   <small style="color:var(--mute);font-weight:600;display:block;margin-top:6px">Tus movimientos, categorías y presupuestos se guardan automáticamente y en tiempo real en tu nube privada de Google.</small>
+  </div>
+  ${FB_MSG?`<div class="note" style="background:var(--bg);margin:10px 0;font-size:13px">${esc(FB_MSG)}</div>`:''}
+  <button class="save" onclick="pushToFirebase(true)">🔄 Sincronizar ahora</button>
+  <button class="cp" style="margin-top:10px" onclick="signOutFb(false)">Cerrar sesión (mantener datos en este móvil)</button>
+  <button class="del" onclick="signOutFb(true)">Cerrar sesión y limpiar datos de este dispositivo</button>`;
+ }
+ return `<small style="color:var(--mute);font-weight:600;display:block;margin-bottom:10px">Inicia sesión o crea una cuenta gratuita para que tus datos nunca se pierdan si cambias de móvil o borras el navegador, y para sincronizar varios dispositivos en tiempo real.</small>
+ <div class="seg" style="margin-bottom:12px">
+  <button class="${FB_MODE==='login'?'on':''}" ${FB_MODE==='login'?'style="background:var(--brand)"':''} onclick="FB_MODE='login';FB_MSG='';drawSet()">Iniciar sesión</button>
+  <button class="${FB_MODE==='reg'?'on':''}" ${FB_MODE==='reg'?'style="background:var(--brand)"':''} onclick="FB_MODE='reg';FB_MSG='';drawSet()">Crear cuenta</button>
+ </div>
+ ${FB_MSG?`<div class="note" style="background:var(--bg);margin:10px 0;font-size:13px">${esc(FB_MSG)}</div>`:''}
+ <div class="lbl">Correo electrónico</div>
+ <div class="f"><input id="fb-em" type="email" inputmode="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" style="margin-bottom:8px"></div>
+ <div class="lbl">Contraseña ${FB_MODE==='reg'?'(mínimo 6 caracteres)':''}</div>
+ <div class="f"><input id="fb-pw" type="password" autocomplete="${FB_MODE==='reg'?'new-password':'current-password'}" placeholder="••••••••" onkeydown="if(event.key==='Enter')submitFbAuth()" style="margin-bottom:10px"></div>
+ <button class="save" onclick="submitFbAuth()">${FB_MODE==='reg'?'✨ Crear mi cuenta y respaldar datos':'🔑 Entrar y sincronizar'}</button>
+ ${FB_MODE==='login'?`<button class="del" style="color:var(--mute);margin-top:6px" onclick="resetFbPwd()">¿Has olvidado tu contraseña?</button>`:''}`;
+}
+
+initFirebaseApp();
 </script>
 
 
