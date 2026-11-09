@@ -193,7 +193,7 @@ function fixup(){
 try{const r=localStorage.getItem('mimes_v1');if(r){S=JSON.parse(r);if(S.cats)CATS=S.cats}}catch(e){}
 S=Object.assign({tx:[],rec:[],pots:[]},S);
 fixup();
-function save(){S.cats=CATS;S.updatedAt=Date.now();try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}if(typeof scheduleFbPush==='function')scheduleFbPush()}catch(e){}}
+function save(){S.cats=CATS;S.updatedAt=Date.now();try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}if(typeof scheduleFbPush==='function')scheduleFbPush()}
 const key=()=>V.y+'-'+String(V.m+1).padStart(2,'0');
 const mtx=()=>S.tx.filter(t=>t.date.slice(0,7)===key()).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
 const sum=(l,ty)=>l.filter(t=>t.type===ty).reduce((a,t)=>a+t.amount,0);
@@ -928,7 +928,7 @@ async function signOutFb(clearLocal){
  await FB_AUTH.signOut();
  if(clearLocal){
   localStorage.removeItem('mimes_v1');
-  S=fresh();CATS=JSON.parse(JSON.stringify(DEF));fixup();
+  S={tx:[],rec:[],pots:[]};CATS=JSON.parse(JSON.stringify(DEF));fixup();
  }
  FB_MSG='Sesión cerrada correctamente.';
  render();drawSet();
