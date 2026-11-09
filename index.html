@@ -134,6 +134,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
+window.addEventListener('error',e=>{const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div style="padding:24px;font:600 15px system-ui;color:#c0392b">⚠️ Error al iniciar la app:<br><small>'+String(e.message).replace(/</g,'&lt;')+'</small><br><br><small>Recarga la página. Si persiste, avísame con este mensaje.</small></div>'});
+// Estado de Firebase: debe declararse antes del primer render() (la cabecera lee FB_USER al pintarse)
+let FB_USER=null,FB_DB=null,FB_AUTH=null,FB_UNSUB=null,FB_ST='off',FB_MSG='',FB_MODE='login',FB_TMR=null,FB_IGNORE=false;
 const DEF={
  income:[['Nómina','💼'],['Extra','✨'],['Regalo','🎁'],['Otros','💰']],
  fixed:[['Alquiler','🏠'],['Gimnasio','🏋️'],['Peluquería','💈'],['Spotify','🎧'],['Parking','🅿️']],
@@ -785,7 +788,6 @@ const firebaseConfig = {
   appId: "1:478389509971:web:c029131eb6d8096ecb4ba6"
 };
 
-let FB_USER=null,FB_DB=null,FB_AUTH=null,FB_UNSUB=null,FB_ST='off',FB_MSG='',FB_MODE='login',FB_TMR=null,FB_IGNORE=false;
 
 function cloudIcon(){
  if(!FB_USER)return '☁️';
