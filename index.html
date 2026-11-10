@@ -136,6 +136,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-
 <script>
 window.addEventListener('error',e=>{const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div style="padding:24px;font:600 15px system-ui;color:#c0392b">⚠️ Error al iniciar la app:<br><small>'+String(e.message).replace(/</g,'&lt;')+'</small><br><br><small>Recarga la página. Si persiste, avísame con este mensaje.</small></div>'});
 // Estado de Firebase: debe declararse antes del primer render() (la cabecera lee FB_USER al pintarse)
+let FIXED_N=0;
 let FB_USER=null,FB_DB=null,FB_AUTH=null,FB_UNSUB=null,FB_ST='off',FB_MSG='',FB_MODE='login',FB_TMR=null,FB_IGNORE=false;
 const DEF={
  income:[['Nómina','💼'],['Extra','✨'],['Regalo','🎁'],['Otros','💰']],
@@ -178,7 +179,8 @@ function fixup(){
  syncTypes();
  S.tx=Array.isArray(S.tx)?S.tx:[];
  S.tx.forEach(t=>{
-  if(!T[t.type])t.type='var';
+  if(t.type==='var'&&t.cat==='Traspaso'&&t.bank2){t.type='transfer';FIXED_N++}   // repara traspasos convertidos por error en gasto variable
+  if(t.type!=='transfer'&&!T[t.type])t.type='var';
   if(t.type==='expense')t.type='var';
   if(t.bank==='Efectivo'){t.bank='';if(!t.mode)t.mode='Efectivo'}
   if(t.mode==='Efectivo')t.bank='';
@@ -191,7 +193,7 @@ function fixup(){
 }
 try{const r=localStorage.getItem('mimes_v1');if(r){S=JSON.parse(r);if(S.cats)CATS=S.cats}}catch(e){}
 S=Object.assign({tx:[],rec:[],pots:[]},S);
-fixup();
+fixup();if(FIXED_N){FIXED_N=0;save()}
 function save(){S.cats=CATS;S.updatedAt=Date.now();try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}if(typeof scheduleFbPush==='function')scheduleFbPush()}
 const key=()=>V.y+'-'+String(V.m+1).padStart(2,'0');
 const mtx=()=>S.tx.filter(t=>t.date.slice(0,7)===key()).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
@@ -644,7 +646,7 @@ function importData(){
  IARM=false;ICACHE='';
  S=Object.assign({tx:[],rec:[],pots:[]},d);
  CATS=S.cats?JSON.parse(JSON.stringify(S.cats)):JSON.parse(JSON.stringify(DEF));
- fixup();save();IMSG='✓ Datos restaurados correctamente.';render();
+ fixup();FIXED_N=0;save();IMSG='✓ Datos restaurados correctamente.';render();
 }
 function expBody(){
  return `<div class="lbl">Exportar tus datos</div><small style="color:var(--mute);font-weight:600">Copia este texto o descarga el archivo .json para guardar un respaldo.</small><textarea id="ej" readonly rows="5" style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" onfocus="this.select()">${esc(JSON.stringify(S))}</textarea><div class="f2" style="gap:8px"><button class="cp" onclick="const e=$('#ej');e.select();document.execCommand('copy');this.textContent='✓ Copiado'">📋 Copiar texto</button><button class="cp" onclick="dlJson()">⬇ Descargar .json</button></div><hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><div class="lbl">Importar / Restaurar copia</div><textarea id="ij" rows="4" placeholder="Pega aquí tu copia JSON..." style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" oninput="ICACHE=this.value;IARM=false">${esc(ICACHE)}</textarea><label class="cp" style="display:block;text-align:center;margin-bottom:8px;cursor:pointer">📂 Subir archivo .json<input type="file" accept=".json,application/json" style="display:none" onchange="loadFile(this)"></label>${IMSG?`<div class="note" style="background:var(--bg);margin:8px 0;font-size:13px">${esc(IMSG)}</div>`:''}<button class="save" style="background:${IARM?'var(--exp)':'var(--brand)'}" onclick="importData()">${IARM?'¿Seguro? Pulsa para sobrescribir':'Restaurar copia de seguridad'}</button>`;
@@ -820,7 +822,7 @@ function initFirebaseApp(){
         if(rTime>=lTime||!S.tx.length){
          S=Object.assign({tx:[],rec:[],pots:[]},remoteS);
          CATS=S.cats?JSON.parse(JSON.stringify(S.cats)):JSON.parse(JSON.stringify(DEF));
-         fixup();
+         fixup();if(FIXED_N){FIXED_N=0;save()}
          try{localStorage.setItem('mimes_v1',JSON.stringify(S))}catch(e){}
          render();
         }else if(lTime>rTime){
