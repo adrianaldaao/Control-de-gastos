@@ -227,7 +227,7 @@ function resumen(l){
  <div class="tri"><button class="mini" style="text-align:left" onclick="go('income')"><small><i class="dot" style="background:var(--inc)"></i>${esc(T.income.n)}</small><b>${eur(inc)}</b></button><button class="mini" style="text-align:left" onclick="go('gastos')"><small><i class="dot" style="background:var(--exp)"></i>Gastos</small><b>${eur(exp)}</b></button><button class="mini" style="text-align:left" onclick="go('ahorro')"><small><i class="dot" style="background:var(--inv)"></i>${esc(T.invest.n)}</small><b>${eur(inv)}</b></button></div>
  <div class="card"><h2>Informe mensual</h2>${monthChart(chartIt,inc)}
  <div style="margin-top:10px">${outK.map(k=>{const v=sum(l,k);return `<button class="blk" onclick="go('${T[k].g==='exp'?'gastos':'ahorro'}')"><i class="dot" style="background:${T[k].c}"></i>${esc(T[k].n)}<b>${eur(v)} <small style="color:var(--mute)">${pc(v,inc)}</small></b></button>`}).join('')}<div class="blk"><i class="dot" style="background:var(--sav)"></i>${esc(SAV_META.n)}<b>${eur(sav)}</b></div></div></div>
- ${bankCard(l)}`;
+ ${riskCard(l)}${bankCard(l)}`;
 }
 function quickConCard(ty){
  return `<div class="card"><div class="f2"><div><b>🏷️ Conceptos de ${esc(T[ty].n.toLowerCase())}</b><br><small style="color:var(--mute);font-weight:600">${(CATS[ty]||[]).map(c=>c[1]+' '+esc(c[0])).join(' · ')}</small></div><button class="chip on" style="flex:none" onclick="openConFor('${ty}')">＋ Añadir / Editar</button></div></div>`;
@@ -253,7 +253,7 @@ function render(){applyColors();autoApply();if(['cloud','banks','modes','look','
  const l=mtx(),mn=MN[V.m]+' '+V.y;
  $('#app').innerHTML=`<header><button class="arr" aria-label="Mes anterior" onclick="move(-1)">‹</button><h1>${mn}</h1><button class="arr" aria-label="Mes siguiente" onclick="move(1)">›</button></header>${modeSeg()}
  ${V.tab==='resumen'?resumen(l):V.tab==='income'?incView(l):V.tab==='gastos'?gastos(l):V.tab==='bud'?budView(l):V.tab==='ahorro'?ahorroView(l):resumen(l)}
- <div class="foot"><button onclick="openColors()">🎨 Colores</button> · Datos en este dispositivo · <button class="rs" onclick="resetAll()">Borrar todo</button></div>
+ <div class="foot"><button onclick="openColors()">🎨 Colores</button> · Datos en este dispositivo · ${bkBtn()} · <button class="rs" onclick="resetAll()">Borrar todo</button></div>
  ${V.tab==='bud'?'':`<button class="fab" aria-label="Añadir movimiento" onclick="openSheet(V.tab==='income'?'income':V.tab==='ahorro'?'invest':'semi')">+</button>`}
  <nav><div>${NAV.map(n=>`<button class="${V.tab===n[0]?'on':''}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}</button>`).join('')}</div></nav>`;
 }
@@ -493,13 +493,31 @@ function budRow(l,ty,c){
   col=good?(p>=1?'var(--inc)':'var(--brand)'):over?'var(--exp)':p>=.8?'var(--sav)':'var(--inc)',
   vb=ty==='income'?'recibido':ty==='saving'?'ahorrado':'gastado',
   tag=adj?' <small style="color:var(--brand)">· ajustado este mes</small>':fromRec?' <small style="color:var(--mute)">· de su recurrencia</small>':'';
- return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="f2"><span>${c[1]} ${esc(n)}${tag}</span><input class="bi" style="width:100px" inputmode="decimal" placeholder="Previsto \u20ac" value="${f2(lim)}" data-k="${esc(k)}" onchange="setBud(this.dataset.k,this.value)" aria-label="Previsi\u00f3n mensual de ${esc(n)}"></div>${lim?`<div class="pbar" role="progressbar" aria-valuenow="${Math.round(p*100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(0,Math.min(100,p*100))}%;background:${col}"></i></div><div class="leg" style="margin-top:4px"><span style="color:${col}">${eur(sp)} ${vb} de ${eur(lim)} \u00b7 ${Math.round(p*100)}%${over?' \u00b7 te has pasado '+eur(sp-lim):!good&&p>=1?' \u00b7 en el tope':!good&&p>=.8?' \u00b7 cerca del tope':''}</span></div>`:`<div class="leg" style="margin-top:2px"><span>${vb[0].toUpperCase()+vb.slice(1)}: ${eur(sp)} \u00b7 sin previsi\u00f3n</span></div>`}</div>`;
+ return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="f2"><span>${c[1]} ${esc(n)}${tag}</span><input class="bi" style="width:100px" inputmode="decimal" placeholder="Previsto \u20ac" value="${f2(lim)}" data-k="${esc(k)}" onchange="setBud(this.dataset.k,this.value)" aria-label="Previsi\u00f3n mensual de ${esc(n)}"></div>${lim?`<div class="pbar" role="progressbar" aria-valuenow="${Math.round(p*100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(0,Math.min(100,p*100))}%;background:${col}"></i></div><div class="leg" style="margin-top:4px"><span style="color:${col}">${eur(sp)} ${vb} de ${eur(lim)} \u00b7 ${Math.round(p*100)}%${over?' \u00b7 te has pasado '+eur(sp-lim):!good&&p>=1?' \u00b7 en el tope':!good&&p>=.8?' \u00b7 cerca del tope':''}</span>${paceOf(ty,lim,sp)}</div>`:`<div class="leg" style="margin-top:2px"><span>${vb[0].toUpperCase()+vb.slice(1)}: ${eur(sp)} \u00b7 sin previsi\u00f3n</span></div>`}</div>`;
 }
 const planSum=t=>t==='saving'?(planOf('saving:Ahorro')||0):(CATS[t]||[]).reduce((a,c)=>a+(planOf(t+':'+c[0])||0),0);
 function planTop(l){
  const inc=incPlan(),asg=outTypes().reduce((a,k)=>a+planSum(k),0)+planSum('saving'),left=Math.round((inc-asg)*100)/100;
  const col=inc<=0?'--mute':left<0?'--exp':left===0?'--inc':'--sav',st=inc<=0?'a\u00f1ade tus ingresos previstos':left>0?'sin destino':left===0?'\u00a1todo asignado!':'asignado de m\u00e1s',pr=inc>0?Math.max(0,Math.min(100,asg/inc*100)):0;
  return `<div class="card" style="position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:4;margin-top:0;border:2px solid var(${col})"><div class="f2"><span style="font-weight:800">Por asignar</span><span style="text-align:right"><b style="font-size:26px;letter-spacing:-.5px;color:var(${col==='--mute'?'--ink':col})">${eur(left)}</b> <small style="color:var(--mute);font-weight:700">${st}</small></span></div><div class="pbar" role="progressbar" aria-valuenow="${Math.round(pr)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pr}%;background:var(${col==='--mute'?'--line':col})"></i></div><div class="leg"><span>Ingresos ${eur(inc)}</span><span>\u2212 Asignado ${eur(asg)}</span></div></div>`;
+}
+function paceOf(ty,lim,sp){
+ const d=new Date(),rem=lim-sp;
+ if(!(lim>0)||Math.round(rem*100)<=0||!T[ty]||T[ty].g!=='exp'||['fixed','debt'].includes(ty)||V.y!==d.getFullYear()||V.m!==d.getMonth())return'';
+ const dl=new Date(V.y,V.m+1,0).getDate()-d.getDate()+1;
+ return `<span>≈ ${eur(rem/dl)}/día · ${dl===1?'último día':dl+' días'}</span>`;
+}
+function riskCard(l){
+ const it=[];let any=false;
+ typesOf('exp').filter(k=>!['fixed','debt'].includes(k)).forEach(k=>(CATS[k]||[]).forEach(c=>{
+  const lim=planOf(k+':'+c[0]);if(!(lim>0))return;any=true;
+  const sp=l.filter(t=>t.type===k&&t.cat===c[0]).reduce((a,t)=>a+t.amount,0),pr=sp/lim;
+  if(pr>=.8)it.push({n:c[0],e:c[1],k,sp,lim,pr});
+ }));
+ if(!any)return'';
+ it.sort((a,b)=>b.pr-a.pr);
+ const row=x=>{const over=Math.round(x.sp*100)>Math.round(x.lim*100),col=over?'var(--exp)':'var(--sav)';return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="f2"><span>${x.e} ${esc(x.n)}</span><b style="color:${col}">${Math.round(x.pr*100)}%</b></div><div class="pbar"><i style="width:${Math.min(100,x.pr*100)}%;background:${col}"></i></div><div class="leg" style="margin-top:4px"><span style="color:${col}">${eur(x.sp)} de ${eur(x.lim)}${over?' · +'+eur(x.sp-x.lim):''}</span>${paceOf(x.k,x.lim,x.sp)}</div></div>`};
+ return `<div class="card"><h2>Presupuestos en riesgo</h2>${it.length?it.slice(0,8).map(row).join(''):'<div class="empty">✅ Ningún concepto cerca de su tope.</div>'}<button class="cp" style="margin-top:10px" onclick="go('bud')">Ver presupuestos</button></div>`;
 }
 function budView(l){
  const blk=(id,title,color,plan,real,rows)=>`<details class="acc" ${(V.op||{})['pb'+id]?'open':''} ontoggle="(V.op=V.op||{})['pb${id}']=this.open"><summary><i class="dot" style="background:var(${color})"></i>${esc(title)}<b>${eur(plan)} <small style="color:var(--mute)">real ${eur(real)}</small></b></summary><div class="card">${rows}</div></details>`,
@@ -545,10 +563,10 @@ function ahorroView(l){
 }
 const RL={fixed:'Gasto fijo',semi:'Gasto semifijo',var:'Gasto variable',invest:'Inversión'};
 let CON_ONLY=null,CAT_MSG='',CAT_G='exp';
-function openSettings(){SM=null;CON_ONLY=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['cloud','👤','Cuenta y Nube (Sincronización)'],['cats','🗂️','Categorías'],['con','🏷️','Conceptos'],['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad (JSON)']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
+function openSettings(){SM=null;CON_ONLY=null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="Ajustes"><h2 style="margin:0 0 8px;font-size:18px">Ajustes</h2>${[['cloud','👤','Cuenta y Nube (Sincronización)'],['cats','🗂️','Categorías'],['con','🏷️','Conceptos'],['banks','🏦','Bancos'],['modes','💳','Modos de pago'],['look','🎨','Apariencia'],['recs','🔁','Recurrencias globales'],['exp','💾','Copia de seguridad y exportación']].map(([k,e,n])=>`<button class="row" onclick="openSet('${k}')"><span class="ico" style="background:var(--bg)">${e}</span><span class="t"><b>${n}</b></span><span style="color:var(--mute)">›</span></button>`).join('')}<button class="save" style="margin-top:10px" onclick="closeSheet()">Cerrar</button></div>`}
 function openSet(k){RMSG='';SM=k;CMSG='';CARM=null;CON_ONLY=null;CAT_MSG='';drawSet()}
 function drawSet(){
- const t={cloud:'Cuenta y Nube',cats:'Categorías',banks:'Bancos',modes:'Modos de pago',look:'Apariencia',recs:'Recurrencias globales',exp:'Copia de seguridad (JSON)',con:CON_ONLY?'Conceptos · '+T[CON_ONLY].n:'Gestión de conceptos'}[SM];
+ const t={cloud:'Cuenta y Nube',cats:'Categorías',banks:'Bancos',modes:'Modos de pago',look:'Apariencia',recs:'Recurrencias globales',exp:'Copia de seguridad y exportación',con:CON_ONLY?'Conceptos · '+T[CON_ONLY].n:'Gestión de conceptos'}[SM];
  $('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${t}"><h2 style="margin:0 0 10px;font-size:18px">${t}</h2>${SM==='recs'?globalRecs():SM==='cloud'?cloudBody():SM==='exp'?expBody():SM==='con'?conBody():SM==='cats'?catsBody():setBody(SM)}<button class="del" style="color:var(--mute)" onclick="${CON_ONLY?'closeSheet()':'openSettings()'}">${CON_ONLY?'Cerrar':'‹ Volver a ajustes'}</button></div>`;
 }
 function editCatMeta(k,field,val){
@@ -628,6 +646,7 @@ function dlJson(){
  a.href=URL.createObjectURL(blob);
  a.download='mi-mes-backup-'+new Date().toISOString().slice(0,10)+'.json';
  document.body.appendChild(a);a.click();a.remove();
+ S.lastBackup=Date.now();save();if(SM==='exp')drawSet();
 }
 function loadFile(inp){
  const f=inp.files&&inp.files[0];if(!f)return;
@@ -642,14 +661,49 @@ function importData(){
  let d;
  try{d=JSON.parse(raw)}catch(e){IARM=false;IMSG='El texto no es un JSON válido.';drawSet();return}
  if(!d||typeof d!=='object'||!Array.isArray(d.tx)){IARM=false;IMSG='El JSON no tiene el formato de la app.';drawSet();return}
- if(!IARM){IARM=true;IMSG='⚠️ Se reemplazarán tus datos actuales por los de la copia. Pulsa otra vez para confirmar.';drawSet();return}
+ if(!IARM){IARM=true;const ds=d.tx.map(t=>t.date).filter(Boolean).sort();IMSG='⚠️ Se reemplazarán tus '+S.tx.length+' movimientos actuales por los de la copia ('+d.tx.length+(ds.length?', del '+ds[0]+' al '+ds[ds.length-1]:'')+'). Pulsa otra vez para confirmar.';drawSet();return}
  IARM=false;ICACHE='';
  S=Object.assign({tx:[],rec:[],pots:[]},d);
  CATS=S.cats?JSON.parse(JSON.stringify(S.cats)):JSON.parse(JSON.stringify(DEF));
  fixup();save();IMSG='✓ Datos restaurados correctamente.';render();
 }
+let EXS='month';
+const TN=t=>t.type==='transfer'?'Traspaso':(T[t.type]?T[t.type].s:t.type);
+const sgn=t=>t.type==='transfer'?0:(T[t.type]&&T[t.type].g==='inc'?1:-1)*t.amount;
+function exList(){const k=EXS==='year'?String(V.y):key(),L=EXS==='year'?4:7;return S.tx.filter(t=>EXS==='all'||t.date.slice(0,L)===k).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id)}
+function exLbl(){return EXS==='all'?'todo el historial':EXS==='year'?String(V.y):MN[V.m]+' '+V.y}
+function bkBtn(){const d=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/864e5):-1,w=d<0?S.tx.length>0:d>30;return `<button onclick="openSet('exp')" ${w?'style="color:var(--exp)"':''}>💾 ${d<0?'Sin copia de seguridad':d<1?'Copia hecha hoy':'Copia hace '+d+' d'}</button>`}
+function dlCsv(){
+ const q=v=>{v=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v},
+ n=v=>String(Math.round(v*100)/100).replace('.',','),
+ head=['Fecha','Tipo','Categoría','Nota','Importe','Neto','Banco','Banco destino','Modo de pago','Pagado'],
+ rows=exList().map(t=>[t.date,TN(t),t.cat,t.note||'',n(t.amount),n(sgn(t)),t.bank||'',t.bank2||'',t.mode||'',['fixed','debt'].includes(t.type)?(t.paid?'Sí':'No'):'']),
+ csv='\ufeff'+[head,...rows].map(r=>r.map((c,i)=>i===4||i===5?c:q(c)).join(';')).join('\r\n'),
+ a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ a.download='mi-mes-'+(EXS==='all'?'todo':EXS==='year'?V.y:key())+'.csv';
+ document.body.appendChild(a);a.click();a.remove();
+}
+function prPdf(){
+ const l=exList(),out=outTypes(),tr=l.filter(t=>t.type==='transfer'),ad=(a,t)=>a+t.amount,
+ bk=BANKS.map(b=>[b,l.filter(t=>T[t.type]&&T[t.type].g==='inc'&&t.bank===b).reduce(ad,0)+tr.filter(t=>t.bank2===b).reduce(ad,0),l.filter(t=>out.includes(t.type)&&t.bank===b).reduce(ad,0)+tr.filter(t=>t.bank===b).reduce(ad,0)]),
+ tb=(h,r,k)=>`<table><tr>${h.map((x,i)=>`<th class="${i>=k?'r':''}">${x}</th>`).join('')}</tr>${r.map(x=>`<tr>${x.map((c,i)=>`<td class="${i>=k?'r':''}">${c}</td>`).join('')}</tr>`).join('')}</table>`;
+ let p=$('#prn');if(p)p.remove();
+ p=document.createElement('div');p.id='prn';
+ p.innerHTML=`<style>#prn{display:none}@media print{body>*:not(#prn){display:none!important}#prn{display:block;color:#000;background:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px}#prn h1{font-size:20px;margin:0 0 4px}#prn h2{font-size:15px;margin:14px 0 2px}#prn table{width:100%;border-collapse:collapse;margin:6px 0}#prn th,#prn td{padding:4px 6px;border-bottom:1px solid #bbb;text-align:left}#prn .r{text-align:right}#prn tr{page-break-inside:avoid}}</style><h1>Mi mes · ${esc(exLbl())}</h1><div>Generado el ${new Date().toLocaleDateString('es-ES')}. Los traspasos entre bancos no cuentan como ingreso ni gasto.</div>`
+  +tb(['Resumen','€'],[['Ingresos',eur(sumG(l,'inc'))],['Gastos',eur(sumG(l,'exp'))],['Inversiones',eur(sumG(l,'inv'))],[esc(SAV_META.n),eur(ah(l))]],1)
+  +(BANKS.length?'<h2>Bancos</h2>'+tb(['Banco','Entra','Sale','Diferencia'],bk.map(x=>[esc(x[0]),eur(x[1]),eur(x[2]),eur(x[1]-x[2])]),1):'')
+  +'<h2>Movimientos</h2>'+tb(['Fecha','Tipo','Concepto','Banco','Importe'],l.map(t=>[t.date,esc(TN(t)),esc(t.type==='transfer'?(t.bank||'')+' → '+(t.bank2||''):t.cat+(t.note?' · '+t.note:'')),esc(t.type==='transfer'?'':t.bank||''),eur(t.amount)]),4);
+ document.body.appendChild(p);
+ addEventListener('afterprint',()=>p.remove(),{once:true});
+ setTimeout(()=>print(),60);
+}
+function expExtra(){
+ const b=([k,n])=>`<button class="chip ${EXS===k?'on':''}" onclick="EXS='${k}';drawSet()">${n}</button>`;
+ return `<div class="note" style="background:var(--bg);margin:0 0 12px;font-size:13px">💾 Última copia JSON: <b>${S.lastBackup?new Date(S.lastBackup).toLocaleDateString('es-ES'):'nunca'}</b>. Descárgala de vez en cuando y guárdala fuera de la app.</div><div class="lbl">Exportar para Excel o PDF</div><small style="color:var(--mute);font-weight:600">Periodo: ${esc(exLbl())}</small><div class="chips" style="margin:8px 0">${[['month',MN[V.m]],['year',String(V.y)],['all','Todo']].map(b).join('')}</div><div class="f2" style="gap:8px"><button class="cp" onclick="dlCsv()">⬇ CSV (Excel)</button><button class="cp" onclick="prPdf()">🖨️ PDF</button></div><small style="color:var(--mute);font-weight:600">El CSV usa «;» y coma decimal para abrirse directo en Excel en español. El PDF se genera con el diálogo de impresión: elige «Guardar como PDF».</small><hr style="border:0;border-top:1px solid var(--line);margin:16px 0">`;
+}
 function expBody(){
- return `<div class="lbl">Exportar tus datos</div><small style="color:var(--mute);font-weight:600">Copia este texto o descarga el archivo .json para guardar un respaldo.</small><textarea id="ej" readonly rows="5" style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" onfocus="this.select()">${esc(JSON.stringify(S))}</textarea><div class="f2" style="gap:8px"><button class="cp" onclick="const e=$('#ej');e.select();document.execCommand('copy');this.textContent='✓ Copiado'">📋 Copiar texto</button><button class="cp" onclick="dlJson()">⬇ Descargar .json</button></div><hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><div class="lbl">Importar / Restaurar copia</div><textarea id="ij" rows="4" placeholder="Pega aquí tu copia JSON..." style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" oninput="ICACHE=this.value;IARM=false">${esc(ICACHE)}</textarea><label class="cp" style="display:block;text-align:center;margin-bottom:8px;cursor:pointer">📂 Subir archivo .json<input type="file" accept=".json,application/json" style="display:none" onchange="loadFile(this)"></label>${IMSG?`<div class="note" style="background:var(--bg);margin:8px 0;font-size:13px">${esc(IMSG)}</div>`:''}<button class="save" style="background:${IARM?'var(--exp)':'var(--brand)'}" onclick="importData()">${IARM?'¿Seguro? Pulsa para sobrescribir':'Restaurar copia de seguridad'}</button>`;
+ return `${expExtra()}<div class="lbl">Exportar tus datos</div><small style="color:var(--mute);font-weight:600">Copia este texto o descarga el archivo .json para guardar un respaldo.</small><textarea id="ej" readonly rows="5" style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" onfocus="this.select()">${esc(JSON.stringify(S))}</textarea><div class="f2" style="gap:8px"><button class="cp" onclick="const e=$('#ej');e.select();document.execCommand('copy');this.textContent='✓ Copiado'">📋 Copiar texto</button><button class="cp" onclick="dlJson()">⬇ Descargar .json</button></div><hr style="border:0;border-top:1px solid var(--line);margin:16px 0"><div class="lbl">Importar / Restaurar copia</div><textarea id="ij" rows="4" placeholder="Pega aquí tu copia JSON..." style="width:100%;margin:8px 0;border:2px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink);padding:10px;font:12px monospace" oninput="ICACHE=this.value;IARM=false">${esc(ICACHE)}</textarea><label class="cp" style="display:block;text-align:center;margin-bottom:8px;cursor:pointer">📂 Subir archivo .json<input type="file" accept=".json,application/json" style="display:none" onchange="loadFile(this)"></label>${IMSG?`<div class="note" style="background:var(--bg);margin:8px 0;font-size:13px">${esc(IMSG)}</div>`:''}<button class="save" style="background:${IARM?'var(--exp)':'var(--brand)'}" onclick="importData()">${IARM?'¿Seguro? Pulsa para sobrescribir':'Restaurar copia de seguridad'}</button>`;
 }
 let CMSG='',CARM=null;
 const getConT=()=>(CON_ONLY?[CON_ONLY]:allTypes()).map(k=>[k,T[k].n]);
