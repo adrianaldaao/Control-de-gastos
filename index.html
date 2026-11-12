@@ -82,7 +82,7 @@ nav button.on{background:var(--brand);color:#fff}
 .chip{padding:8px 12px;border-radius:14px;background:var(--bg);font-weight:700;font-size:14px;border:2px solid transparent}
 .chip.on{border-color:var(--brand);background:var(--card)}
 .f{display:flex;gap:10px}
-.f input{flex:1;min-width:0;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:11px 12px;font:600 15px Nunito,system-ui,sans-serif;margin-bottom:12px}
+.f input,.f select{flex:1;min-width:0;border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:11px 12px;font:600 15px Nunito,system-ui,sans-serif;margin-bottom:12px}
 .save{width:100%;padding:15px;border-radius:18px;background:var(--brand);color:#fff;font-weight:800;font-size:16px}
 .del{width:100%;padding:12px;color:var(--exp);font-weight:800}
 .foot{text-align:center;color:var(--mute);font-size:12px;font-weight:700;margin-top:18px}
@@ -497,7 +497,7 @@ function budRow(l,ty,c){
 }
 const planSum=t=>t==='saving'?(planOf('saving:Ahorro')||0):(CATS[t]||[]).reduce((a,c)=>a+(planOf(t+':'+c[0])||0),0);
 function planTop(l){
- const inc=incPlan(),asg=outTypes().reduce((a,k)=>a+planSum(k),0)+planSum('saving'),left=Math.round((inc-asg)*100)/100;
+ const inc=incPlan(),asg=outTypes().reduce((a,k)=>a+planSum(k),0)+planSum('saving')+potSum(),left=Math.round((inc-asg)*100)/100;
  const col=inc<=0?'--mute':left<0?'--exp':left===0?'--inc':'--sav',st=inc<=0?'a\u00f1ade tus ingresos previstos':left>0?'sin destino':left===0?'\u00a1todo asignado!':'asignado de m\u00e1s',pr=inc>0?Math.max(0,Math.min(100,asg/inc*100)):0;
  return `<div class="card" style="position:sticky;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:4;margin-top:0;border:2px solid var(${col})"><div class="f2"><span style="font-weight:800">Por asignar</span><span style="text-align:right"><b style="font-size:26px;letter-spacing:-.5px;color:var(${col==='--mute'?'--ink':col})">${eur(left)}</b> <small style="color:var(--mute);font-weight:700">${st}</small></span></div><div class="pbar" role="progressbar" aria-valuenow="${Math.round(pr)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pr}%;background:var(${col==='--mute'?'--line':col})"></i></div><div class="leg"><span>Ingresos ${eur(inc)}</span><span>\u2212 Asignado ${eur(asg)}</span></div></div>`;
 }
@@ -524,9 +524,9 @@ function budView(l){
   rows=t=>(CATS[t]||[]).map(c=>budRow(l,t,c)).join('')+`<button class="cp" style="margin-top:10px" onclick="openConFor('${t}')">＋ Gestionar conceptos de ${esc(T[t].n.toLowerCase())}</button>`;
  const expBlks=typesOf('exp').map(k=>blk(k,T[k].n,T[k].v,planSum(k),sum(l,k),rows(k))).join('');
  const invKs=[...typesOf('inv'),...typesOf('sav')];
- const invPlan=invKs.reduce((a,k)=>a+planSum(k),0)+planSum('saving');
+ const invPlan=invKs.reduce((a,k)=>a+planSum(k),0)+planSum('saving')+potSum();
  const invReal=invKs.reduce((a,k)=>a+sum(l,k),0)+ah(l);
- const invRows=invKs.map(k=>rows(k)).join('')+budRow(l,'saving',[SAV_META.n,'🐷']);
+ const invRows=invKs.map(k=>rows(k)).join('')+budRow(l,'saving',[SAV_META.n,'🐷'])+potRows();
  return planTop(l)+`<div class="card"><h2>Ingresos previstos</h2>${budRow(l,'income',[T.income.n,'💵'])}<label class="f2" style="margin-top:8px"><span>Editar solo ${MN[V.m].toLowerCase()}</span><input type="checkbox" ${V.planMonth?'checked':''} onchange="V.planMonth=this.checked;render()" style="width:22px;height:22px"></label><small style="color:var(--mute);font-weight:600">Sin marcar, los importes valen para todos los meses; marcado, solo para este (p. ej. una paga extra). Los conceptos con recurrencia se rellenan solos.</small></div>`
   +expBlks
   +blk('inv','Inversiones y '+SAV_META.n.toLowerCase(),'--inv',invPlan,invReal,invRows);
@@ -544,17 +544,37 @@ function closeNote(){
  return `<div class="note" style="background:color-mix(in srgb,var(${c}) 16%,transparent);border:2px solid var(${c})" role="status"><b>Cierre de ${MN[+tk.slice(5)-1].toLowerCase()}</b> · ahorraste ${eur(s)} de ${eur(g)}<div style="margin-top:6px">${msg}</div>${x}</div>`;
 }
 const FUND={
- pots:{t:'Planes de ahorro',ic:'🐷',dlg:'Plan de ahorro',nw:'Nuevo plan',del:'Eliminar plan',amt:'Aportación',goal:'Objetivo total (€)',ph:'Nombre (ej. Móvil nuevo)',empty:'Crea un plan de ahorro para tus metas grandes.',note:'Solo seguimiento: las aportaciones no crean movimientos ni cambian tus saldos.',col:'var(--brand)',done:'¡Meta alcanzada!'},
+ pots:{t:'Planes de ahorro',ic:'🐷',dlg:'Plan de ahorro',nw:'Nuevo plan',del:'Eliminar plan',amt:'Aportación',goal:'Objetivo total (€)',ph:'Nombre (ej. Móvil nuevo)',empty:'Crea un plan de ahorro para tus metas grandes.',note:'Las aportaciones no crean movimientos ni cambian tus saldos. La aportación mensual de cada plan cuenta como asignada en Presupuestos.',col:'var(--brand)',done:'¡Meta alcanzada!'},
 };
 const paidOf=p=>p.c.reduce((a,x)=>a+x.a,0);
+function potMo(p,m){
+ m=m||key();
+ const left=p.g-p.c.filter(x=>x.d.slice(0,7)<=m).reduce((a,x)=>a+x.a,0);
+ if(left<=0.005)return 0;
+ if(p.m>0)return Math.min(p.m,left);
+ if(!p.d)return 0;
+ const n=(+p.d.slice(0,4)*12+ +p.d.slice(5,7))-(+m.slice(0,4)*12+ +m.slice(5,7))+1;
+ return n>0?Math.round(left/n*100)/100:0;
+}
+const potSum=m=>(S.pots||[]).reduce((a,p)=>a+potMo(p,m),0);
+function potTxt(p){const v=potMo(p);return v>0?` · aportar ${eur(v)}/mes${p.d&&!(p.m>0)?' hasta '+p.d.slice(5,7)+'/'+p.d.slice(0,4):''}`:''}
+function potRows(){
+ const r=(S.pots||[]).filter(p=>potMo(p)>0);
+ return r.map(p=>`<div class="f2" style="padding:10px 0;border-bottom:1px solid var(--line)"><span>🐷 ${esc(p.n)} <small style="color:var(--brand)">· de su plan</small></span><b>${eur(potMo(p))}</b></div>`).join('')+(r.length?'<small style="color:var(--mute);font-weight:600">Se editan en Ahorro → Planes de ahorro.</small>':'');
+}
+function potDate(p){
+ const y0=new Date().getFullYear(),py=p&&p.d?+p.d.slice(0,4):0,pm=p&&p.d?+p.d.slice(5,7):0,y1=py&&py<y0?py:y0,
+ o=(v,t,sel)=>`<option value="${v}" ${sel?'selected':''}>${t}</option>`;
+ return `<div class="f"><select id="pdm" aria-label="Mes objetivo">${o('','Mes objetivo',!pm)}${MN.map((n,i)=>o(String(i+1).padStart(2,'0'),n,pm===i+1)).join('')}</select><select id="pdy" aria-label="Año objetivo">${o('','Año',!py)}${Array.from({length:y0+11-y1},(_,i)=>y1+i).map(y=>o(y,y,py===y)).join('')}</select></div>`;
+}
 function potsCard(k){
  k=k||'pots';const F=FUND[k],P=S[k]||[];
- return `<div class="card"><h2>${F.t}</h2>${P.length?P.map(p=>{const g=paidOf(p),left=Math.max(0,p.g-g);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><button class="f2" style="width:100%" onclick="openPot(${p.id},'${k}')"><span>${F.ic} ${esc(p.n)}</span><b>${eur(g)} / ${eur(p.g)}</b></button><div class="pbar" role="progressbar" aria-valuenow="${Math.round(g/p.g*100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(0,Math.min(100,g/p.g*100))}%;background:${F.col}"></i></div><div class="f2" style="margin-top:8px"><small style="color:${left?'var(--mute)':'var(--inc)'};font-weight:${left?500:800}">${left?'Pendiente: '+eur(left):F.done}</small><span style="display:flex;gap:6px"><input class="bi" id="pa${p.id}" style="width:92px" inputmode="decimal" placeholder="${F.amt}" aria-label="${F.amt} de ${esc(p.n)}"><button class="chip on" aria-label="Registrar ${F.amt.toLowerCase()}" onclick="addContrib(${p.id},'${k}')">＋</button></span></div></div>`}).join(''):`<div class="empty"><big>${F.ic}</big>${F.empty}</div>`}<button class="cp" style="margin-top:10px" onclick="openPot(0,'${k}')">＋ ${F.nw}</button><div class="leg"><span>${F.note}</span></div></div>`;
+ return `<div class="card"><h2>${F.t}</h2>${P.length?P.map(p=>{const g=paidOf(p),left=Math.max(0,p.g-g);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><button class="f2" style="width:100%" onclick="openPot(${p.id},'${k}')"><span>${F.ic} ${esc(p.n)}</span><b>${eur(g)} / ${eur(p.g)}</b></button><div class="pbar" role="progressbar" aria-valuenow="${Math.round(g/p.g*100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(0,Math.min(100,g/p.g*100))}%;background:${F.col}"></i></div><div class="f2" style="margin-top:8px"><small style="color:${left?'var(--mute)':'var(--inc)'};font-weight:${left?500:800}">${left?'Pendiente: '+eur(left):F.done}${potTxt(p)}</small><span style="display:flex;gap:6px"><input class="bi" id="pa${p.id}" style="width:92px" inputmode="decimal" placeholder="${F.amt}" onkeydown="if(event.key==='Enter')addContrib(${p.id},'${k}')" aria-label="${F.amt} de ${esc(p.n)}"><button class="chip on" aria-label="Registrar ${F.amt.toLowerCase()}" onclick="addContrib(${p.id},'${k}')">＋ Aportar</button></span></div></div>`}).join(''):`<div class="empty"><big>${F.ic}</big>${F.empty}</div>`}<button class="cp" style="margin-top:10px" onclick="openPot(0,'${k}')">＋ ${F.nw}</button><div class="leg"><span>${F.note}</span></div></div>`;
 }
-function openPot(id,k){k=k||'pots';const F=FUND[k],p=id?S[k].find(x=>x.id===id):null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${F.dlg}"><h2 style="margin:0 0 10px;font-size:18px">${p?'Editar':F.nw}</h2><div class="f"><input id="pn" placeholder="${F.ph}" maxlength="30" value="${p?esc(p.n):''}"></div><div class="f"><input id="pg" inputmode="decimal" placeholder="${F.goal}" value="${p?f2(p.g):''}"></div><button class="save" onclick="savePot(${p?p.id:0},'${k}')">Guardar</button>${p?`<button class="del" onclick="delPot(${p.id},'${k}')">${F.del}</button>`:''}</div>`}
-function savePot(id,k){k=k||'pots';const n=$('#pn').value.trim(),g=pv($('#pg').value);if(!n||!(g>0)){$('#pn').focus();return}S[k]=S[k]||[];if(id){const p=S[k].find(x=>x.id===id);p.n=n;p.g=g}else S[k].push({id:uid(),n,g,c:[]});save();closeSheet();render()}
+function openPot(id,k){k=k||'pots';const F=FUND[k],p=id?S[k].find(x=>x.id===id):null;$('#sheet').innerHTML=`<div class="ov" onclick="closeSheet()"></div><div class="sh" role="dialog" aria-label="${F.dlg}"><h2 style="margin:0 0 10px;font-size:18px">${p?'Editar':F.nw}</h2><div class="f"><input id="pn" placeholder="${F.ph}" maxlength="30" value="${p?esc(p.n):''}"></div><div class="f"><input id="pg" inputmode="decimal" placeholder="${F.goal}" value="${p?f2(p.g):''}"></div><div class="f"><input id="pm" inputmode="decimal" placeholder="Aportación mensual (€) · opcional" value="${p&&p.m?f2(p.m):''}"></div>${potDate(p)}<small style="color:var(--mute);font-weight:600">Fecha objetivo (opcional): si la pones y dejas la aportación en blanco, se calcula sola. La aportación mensual cuenta como euro asignado en Presupuestos.</small><button class="save" onclick="savePot(${p?p.id:0},'${k}')">Guardar</button>${p?`<button class="del" onclick="delPot(${p.id},'${k}')">${F.del}</button>`:''}</div>`}
+function savePot(id,k){k=k||'pots';const n=$('#pn').value.trim(),g=pv($('#pg').value),mm=(x=>isNaN(x)||x<=0?0:x)(pv($('#pm').value)),dd=$('#pdy').value&&$('#pdm').value?$('#pdy').value+'-'+$('#pdm').value:'';if(!n||!(g>0)){$('#pn').focus();return}if(!!$('#pdm').value!==!!$('#pdy').value){($('#pdm').value?$('#pdy'):$('#pdm')).focus();return}S[k]=S[k]||[];if(id){const p=S[k].find(x=>x.id===id);p.n=n;p.g=g;p.m=mm;p.d=dd}else S[k].push({id:uid(),n,g,m:mm,d:dd,c:[]});save();closeSheet();render()}
 function delPot(id,k){k=k||'pots';S[k]=S[k].filter(x=>x.id!==id);save();closeSheet();render()}
-function addContrib(id,k){k=k||'pots';const a=pv($('#pa'+id).value);if(isNaN(a)||!a)return;S[k].find(x=>x.id===id).c.push({a,d:new Date().toISOString().slice(0,10)});save();render()}
+function addContrib(id,k){k=k||'pots';const a=pv($('#pa'+id).value);if(isNaN(a)||!a){$('#pa'+id).focus();return}S[k].find(x=>x.id===id).c.push({a,d:new Date().toISOString().slice(0,10)});save();render()}
 function ahorroView(l){
  const s=ah(l),gy=S.goalY||0,gm=goalOf(key());let ys=0;
  for(let m=0;m<12;m++){const x=S.tx.filter(t=>t.date.slice(0,7)===V.y+'-'+String(m+1).padStart(2,'0'));if(x.length)ys+=ah(x)}
